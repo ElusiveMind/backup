@@ -1,3 +1,4 @@
 #!/bin/bash
 
-exec cron -f
+pkill crond
+exec crond -n
