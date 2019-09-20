@@ -35,11 +35,15 @@ if (!is_dir('/app/backups')) {
   mkdir('/app/backups');
 }
 
-$mysql = `mysqldump -u$user -p$pass -h$host $database > /app/backups/$database-$data_prefix.$today.sql`;
-$gzip = `gzip /app/backups/$database-$data_prefix.$today.sql`;
+if (!file_exists("/app/backups/$database-$data_prefix.$today.sql")) {
+  $mysql = `mysqldump -u$user -p$pass -h$host $database > /app/backups/$database-$data_prefix.$today.sql`;
+  $gzip = `gzip /app/backups/$database-$data_prefix.$today.sql`;
+}
 
 // Then get a copy of the files directory
-$files = `cd $files_folder_parent; tar -czf /app/backups/$files_prefix.$today.tar.gz $files_folder_name`;
+if (!file_exists("/app/backups/$files_prefix.$today.tar.gz")) {
+  $files = `cd $files_folder_parent; tar -czf /app/backups/$files_prefix.$today.tar.gz $files_folder_name`;
+}
 
 $paths = [
   $_SERVER['MINIO_BUCKET'] => [
