@@ -30,8 +30,12 @@ $files_folder_name = $_SERVER['FILES_FOLDER_NAME'];
 
 // The first thing we have to do is get the mysqldump.
 $today = date('Y-m-d');
-mkdir('/app/backups');
-$mysql = `mysql -u$user -p$pass -h$host $database > /app/backups/$database-$data_prefix.$today.sql`;
+
+if (!is_dir('/app/backups')) {
+  mkdir('/app/backups');
+}
+
+$mysql = `mysqldump -u$user -p$pass -h$host $database > /app/backups/$database-$data_prefix.$today.sql`;
 $gzip = `gzip /app/backups/$database-$data_prefix.$today.sql`;
 
 // Then get a copy of the files directory
