@@ -8,7 +8,8 @@ To configure the container, environment variables must be set up. Because we are
 
 Keep in mind that if you are going to use this information inside of a docker-compose.yml file - be ABSOLUTELY SURE that this file is not committed to your git repo or you are asking to have a bad day.... possibly more than one.
 
-**Mounts**
+## Mounts  
+
 The first thing you will want to do is mount the relevant directories into the proper places in your container. The primary mount should be the directory of your Drupal files. This is so that the backup container can see them.
 
 For example, if your Drupal files are located (on the host system) at `/mnt/public-contents` then you should set up a mount as follows in the volumes section of your docker-compose.yml file.
@@ -19,19 +20,20 @@ For example, if your Drupal files are located (on the host system) at `/mnt/publ
 
 You would then need to configure your `FILES_FOLDER_PARENT` and `FILES_FOLDER_NAME` environment variables accordingly.
 
-**Environment Variables**
+## Environment Variables  
+
 Here are the configuration environmental variables for all of the settings that the backup server will need to offload to your MinIO instrance.
 
 **MINIO_ENDPOINT**  
 This is the full canonical URL (http or https) to the MinIO server that the backups will be sent to.
 
-**MINIO_KEY**
+**MINIO_KEY**  
 This is the secret key used to authenticate with MinIO. KEEP THIS OUT OF YOUR GIT REPOSITORY. You have been warned. Don't make the same mistakes I have :)
 
-**MINIO_SECRET**
+**MINIO_SECRET**  
 This is the secret phrase used to authenticate with MinIO. Again, KEEP THIS OUT OF YOUR GIT REPOSITORY. You have been warned. Don't make the same mistakes I have :)
 
-***MINIO_FILE_TTL**
+***MINIO_FILE_TTL**  
 This is the number of days to keep of backups. Each backup will be kept for this interval. Once reached, the file will be removed on the next synchronization.
 
 **MYSQL_HOST**  
@@ -58,7 +60,7 @@ The prefix to place as part of the file name. Can be used to identify backups gi
 **DATA_PREFIX**  
 The same as a files prefix, but applies to the database export. It is worthy of noting that the databases will already be prefixed with the `MYSQL_DATABASE` setting as a matter of course.
 
-TODO:
+## TODO  
 
 1. Email notifications of backup status and completions
 2. The ability to handle RSYNC of data as well as transfer to MinIO
