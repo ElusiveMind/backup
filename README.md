@@ -49,7 +49,7 @@ The password for the user by which the MySQL container will be accessed.
 The database on the MySQL container to be backed up.
 
 **FILES_FOLDER_PARENT**  
-Folder that contains the files folder. For example, if this was sites/default/files` the parent would be `sites/default`.
+Folder that contains the files folder. For example, if this was `sites/default/files` the parent would be `sites/default`.
 
 **FILES_FOLDER_NAME**  
 The folder name that was omitted in the parent configuration. In that same example `files`.
