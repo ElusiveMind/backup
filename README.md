@@ -15,7 +15,8 @@ The first thing you will want to do is mount the relevant directories into the p
 For example, if your Drupal files are located (on the host system) at `/mnt/public-contents` then you should set up a mount as follows in the volumes section of your docker-compose.yml file.
 
 ```yaml
-    - /mnt-public-contents:/app/files
+    - /app/nas/website/public-contents:/app/files
+    - /app/nas/website/backups:/app/backups
 ```
 
 You would then need to configure your `FILES_FOLDER_PARENT` and `FILES_FOLDER_NAME` environment variables accordingly.
@@ -33,7 +34,7 @@ This is the secret key used to authenticate with MinIO. KEEP THIS OUT OF YOUR GI
 **MINIO_SECRET**  
 This is the secret phrase used to authenticate with MinIO. Again, KEEP THIS OUT OF YOUR GIT REPOSITORY. You have been warned. Don't make the same mistakes I have :)
 
-***MINIO_FILE_TTL**  
+**MINIO_FILE_TTL**  
 This is the number of days to keep of backups. Each backup will be kept for this interval. Once reached, the file will be removed on the next synchronization.
 
 **MYSQL_HOST**  
