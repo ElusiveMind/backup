@@ -25,7 +25,8 @@ $host = $_SERVER['MYSQL_HOST'];
 $database = $_SERVER['MYSQL_DATABASE'];
 $data_prefix = $_SERVER['DATA_PREFIX'];
 $files_prefix = $_SERVER['FILES_PREFIX'];
-$files_path = $_SERVER['PATH_TO_FILES'];
+$files_folder_parent = $_SERVER['FILES_FOLDER_PARENT'];
+$files_folder_name = $_SERVER['FILES_FOLDER_NAME'];
 
 // The first thing we have to do is get the mysqldump.
 $today = date('Y-m-d');
@@ -33,7 +34,7 @@ $mysql = `mysql -u$user -p$pass -h$host $database > /app/backup/$database-$data_
 $gzip = `gzip /app/backup/$database-$data_prefix.$today.sql`;
 
 // Then get a copy of the files directory
-$files = `tar -czf /app/backup/$files_prefix.$today.tar.gz $path_to_files`;
+$files = `cd $files_folder_parent; tar -czf /app/backup/$files_prefix.$today.tar.gz $files_folder_name`;
 
 $paths = [
   $_SERVER['MINIO_BUCKET'] => [
