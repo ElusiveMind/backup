@@ -5,7 +5,7 @@ LABEL name="FlyingBackup"
 LABEL description="A backup system based in Docker designed for Drupal backups to MinIO"
 LABEL author="Michael R. Bagnall <mrbagnall@icloud.com>"
 LABEL vendor="FlyingFlip Studios"
-LABEL version="0.01"
+LABEL version="0.03"
 
 # Set up our standard binary paths.
 ENV PATH /usr/local/src/vendor/bin/:/usr/local/rvm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin

@@ -7,6 +7,8 @@ use Aws\Exception\AwsException;
 use Aws\S3\ObjectUploader;
 use Aws\S3\ListObjects;
 use Aws\S3\DeleteObject;
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
 
 $s3 = new S3Client([
   'version' => 'latest',
@@ -55,7 +57,7 @@ $paths = [
 /**
  * Step One: Delete any files older than 14 days.
  */
-echo "Deletions:\n";
+$html = '<b>Deletions:</b><hr />';
 foreach ($paths as $bucket => $info) {
   try {
     $result = $s3->ListObjects([
@@ -66,6 +68,7 @@ foreach ($paths as $bucket => $info) {
     echo $e->getMessage();
   }
   if (is_array($result['Contents'])) {
+    $html .= '<ul>';
     foreach ($result['Contents'] as $key => $content) {
       $last_modified = strtotime($content['LastModified']->__toString());
       // Entries expire and are deleted after 14 days.
@@ -75,31 +78,103 @@ foreach ($paths as $bucket => $info) {
           'Bucket' => $bucket,
           'Key' => $content['Key'],
         ]);
-        echo " - Deleted Key: $bucket/" . $content['Key'] . "\n";
+        $html .= "<li><i>Deleted Key:</i> $bucket/" . $content['Key'] . '</li>';
       }
     }
+    $html .= '</ul>';
+  }
+  else {
+    $html .= '<i>There are no files queued for deletion.</i><br /><br />';
   }
 }
 
 /**
  * Step Two: Upload any new files transferred in via rsync
  */
-echo "Additions:\n";
+$html .= "<b>Additions:</b><hr />";
 foreach ($paths as $bucket => $info) {
   chdir($info['path']);
+  $filenames = glob($info['glob']);
+  if (!empty($filenames)) {
+    $html .= '<ul>';
+    foreach (glob($info['glob']) as $filename) {
+      $html .= '<li><b>' . $info['path'] . ':</b> ';
+      $response = $s3->doesObjectExist($bucket, $filename);
+      if ($response != '1') {
+        $html .= "<i>Adding:</i> $bucket/$filename</li>";
 
-  foreach (glob($info['glob']) as $filename) {
-    $response = $s3->doesObjectExist($bucket, $filename);
+        // Send a PutObject request and get the result object.
+        //$result = $s3->putObject([
+        //  'Bucket' => $bucket,
+        //  'Key'    => $filename,
+        //  'SourceFile' => $info['path'] .'/' . $filename
+        //]);
 
-    if ($response != '1') {
-      print " - Added:  $bucket/$filename\n";
-      // Send a PutObject request and get the result object.
-      $result = $s3->putObject([
-        'Bucket' => $bucket,
-        'Key'    => $filename,
-        'SourceFile' => $info['path'] .'/' . $filename
-      ]);
+        // Using stream instead of file path
+        $source = fopen($info['path'] .'/' . $filename, 'rb');
+
+        $uploader = new ObjectUploader(
+          $s3,
+          $bucket,
+          $filename,
+          $source
+        );
+        do {
+          try {
+            $result = $uploader->upload();
+            if ($result["@metadata"]["statusCode"] == '200') {
+              print('<p>File successfully uploaded to ' . $result["ObjectURL"] . '.</p>');
+            }
+            print($result);
+          } catch (MultipartUploadException $e) {
+            rewind($source);
+            $uploader = new MultipartUploader($s3, $source, [
+              'state' => $e->getState(),
+            ]);
+          }
+        } while (!isset($result));
+      }
+      else {
+        $html .= '<i>Already Exists</i></li>';
+      }
+      unlink($info['path'] .'/' . $filename);
     }
-    unlink($info['path'] .'/' . $filename);
   }
+}
+
+// Instantiation and passing `true` enables exceptions
+$mail = new PHPMailer(TRUE);
+
+try {
+  //Server settings
+  $mail->SMTPDebug = 2; // Enable verbose debug output
+  $mail->isSMTP(); // Set mailer to use SMTP
+  $mail->Host = $_SERVER['SMTP_HOSTNAME']; // Specify main and backup SMTP servers
+  $mail->SMTPAuth = TRUE; // Enable SMTP authentication
+  $mail->Username = $_SERVER['SMTP_USERNAME']; // SMTP username
+  $mail->Password = $_SERVER['SMTP_PASSWORD']; // SMTP password
+  $mail->SMTPSecure = 'tls'; // Enable TLS encryption, `ssl` also accepted
+  $mail->Port = 587; // TCP port to connect to
+
+  //Recipients
+  $mail->setFrom('mbagnall@gmail.com', 'Michael Bagnall');
+  $mail->addAddress('mbagnall@itcon-inc.com', 'Michael Bagnall');     // Add a recipient
+  $mail->addReplyTo('mbagnall@itcon-inc.com', 'Michael Bagnall');
+  //$mail->addCC('cc@example.com');
+  //$mail->addBCC('bcc@example.com');
+
+  // Attachments
+  //$mail->addAttachment('/var/tmp/file.tar.gz');         // Add attachments
+  //$mail->addAttachment('/tmp/image.jpg', 'new.jpg');    // Optional name
+
+  // Content
+  $mail->isHTML(true);                                  // Set email format to HTML
+  $mail->Subject = 'Completed Backup Server Run';
+  $mail->Body    = $html;
+  $mail->AltBody = 'You need an HTML email program to read this email. Get with the century';
+
+  $mail->send();
+  echo 'Message has been sent';
+} catch (Exception $e) {
+  echo "Message could not be sent. Mailer Error: {$mail->ErrorInfo}";
 }

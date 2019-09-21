@@ -1,5 +1,9 @@
 {
     "require": {
-        "aws/aws-sdk-php": "^3.100"
+        "aws/aws-sdk-php": "^3.100",
+        "phpmailer/phpmailer": "^6.0",
+        "symfony/polyfill-mbstring": "^1.12",
+        "psr/log": "^1.1",
+        "league/oauth2-google": "^3.0"
     }
 }
