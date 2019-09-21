@@ -1,11 +1,11 @@
 FROM centos:7
 
 # Set our our meta data for this container.
-LABEL name="FlyingBackup"
+LABEL name="ITCON Backup Container"
 LABEL description="A backup system based in Docker designed for Drupal backups to MinIO"
-LABEL author="Michael R. Bagnall <mrbagnall@icloud.com>"
-LABEL vendor="FlyingFlip Studios"
-LABEL version="0.03"
+LABEL author="Michael R. Bagnall <mbagnall@itcon-inc.com>"
+LABEL vendor="ITCON Services"
+LABEL version="0.04"
 
 # Set up our standard binary paths.
 ENV PATH /usr/local/src/vendor/bin/:/usr/local/rvm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin

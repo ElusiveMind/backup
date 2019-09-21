@@ -54,10 +54,13 @@ $paths = [
   ],
 ];
 
+
+$html = 'Backup Container ' . $_SERVER['VERSION_NUMBER'] . ' - Michael R. Bagnall - <mbagnall@itcon-inc.com><hr />';
+
 /**
  * Step One: Delete any files older than 14 days.
  */
-$html = '<b>Deletions:</b><hr />';
+$html .= '<b>Deletions:</b><hr />';
 foreach ($paths as $bucket => $info) {
   try {
     $result = $s3->ListObjects([
@@ -67,7 +70,7 @@ foreach ($paths as $bucket => $info) {
   } catch (S3Exception $e) {
     echo $e->getMessage();
   }
-  if (is_array($result['Contents'])) {
+  if (!empty($result['Contents'])) {
     $html .= '<ul>';
     foreach ($result['Contents'] as $key => $content) {
       $last_modified = strtotime($content['LastModified']->__toString());
@@ -103,13 +106,6 @@ foreach ($paths as $bucket => $info) {
       if ($response != '1') {
         $html .= "<i>Adding:</i> $bucket/$filename</li>";
 
-        // Send a PutObject request and get the result object.
-        //$result = $s3->putObject([
-        //  'Bucket' => $bucket,
-        //  'Key'    => $filename,
-        //  'SourceFile' => $info['path'] .'/' . $filename
-        //]);
-
         // Using stream instead of file path
         $source = fopen($info['path'] .'/' . $filename, 'rb');
 
@@ -122,10 +118,6 @@ foreach ($paths as $bucket => $info) {
         do {
           try {
             $result = $uploader->upload();
-            if ($result["@metadata"]["statusCode"] == '200') {
-              print('<p>File successfully uploaded to ' . $result["ObjectURL"] . '.</p>');
-            }
-            print($result);
           } catch (MultipartUploadException $e) {
             rewind($source);
             $uploader = new MultipartUploader($s3, $source, [
@@ -135,7 +127,7 @@ foreach ($paths as $bucket => $info) {
         } while (!isset($result));
       }
       else {
-        $html .= '<i>Already Exists</i></li>';
+        $html .= $bucket . '/' . $filename . ' <i>Already Exists</i></li>';
       }
       unlink($info['path'] .'/' . $filename);
     }
@@ -147,7 +139,7 @@ $mail = new PHPMailer(TRUE);
 
 try {
   //Server settings
-  $mail->SMTPDebug = 2; // Enable verbose debug output
+  //$mail->SMTPDebug = 2; // Enable verbose debug output
   $mail->isSMTP(); // Set mailer to use SMTP
   $mail->Host = $_SERVER['SMTP_HOSTNAME']; // Specify main and backup SMTP servers
   $mail->SMTPAuth = TRUE; // Enable SMTP authentication
@@ -157,24 +149,17 @@ try {
   $mail->Port = 587; // TCP port to connect to
 
   //Recipients
-  $mail->setFrom('mbagnall@gmail.com', 'Michael Bagnall');
-  $mail->addAddress('mbagnall@itcon-inc.com', 'Michael Bagnall');     // Add a recipient
-  $mail->addReplyTo('mbagnall@itcon-inc.com', 'Michael Bagnall');
-  //$mail->addCC('cc@example.com');
-  //$mail->addBCC('bcc@example.com');
-
-  // Attachments
-  //$mail->addAttachment('/var/tmp/file.tar.gz');         // Add attachments
-  //$mail->addAttachment('/tmp/image.jpg', 'new.jpg');    // Optional name
+  $mail->setFrom($_SERVER['SMTP_FROM']);
+  $mail->addAddress($_SERVER['SMTP_TO']);
+  $mail->addReplyTo($_SERVER['SMTP_FROM']);
 
   // Content
-  $mail->isHTML(true);                                  // Set email format to HTML
+  $mail->isHTML(true);
   $mail->Subject = 'Completed Backup Server Run';
-  $mail->Body    = $html;
+  $mail->Body = $html;
   $mail->AltBody = 'You need an HTML email program to read this email. Get with the century';
 
   $mail->send();
-  echo 'Message has been sent';
 } catch (Exception $e) {
   echo "Message could not be sent. Mailer Error: {$mail->ErrorInfo}";
 }
