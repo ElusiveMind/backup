@@ -38,7 +38,7 @@ if (!is_dir('/app/backups')) {
 }
 
 if (!file_exists("/app/backups/$database-$data_prefix.$today.sql")) {
-  $mysql = `mysqldump -u$user -p$pass -h$host $database > /app/backups/$database-$data_prefix.$today.sql`;
+  $mysql = `mysqldump -u$user -p$pass -h$host $database > /app/backups/$database-$data_prefix.$today.sql.gz`;
   $gzip = `gzip /app/backups/$database-$data_prefix.$today.sql`;
 }
 
