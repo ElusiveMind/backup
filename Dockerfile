@@ -13,4 +13,4 @@ ENV VERSION_NUMBER v0.09
 ADD bash /bash
 ADD php /php
 
-CMD ["php". "/php/send-to-minio.php"]
+CMD ["php", "/php/send-to-minio.php"]
