@@ -13,7 +13,7 @@ ENV VERSION_NUMBER v0.09
 RUN apt update
 RUN apt-get -y install mysql-common
 RUN apt-get -y install default-mysql-client
-RUN apt-get install cron
+RUN apt-get -y install cron
 RUN systemctl stop cron
 
 
