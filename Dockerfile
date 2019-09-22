@@ -5,7 +5,7 @@ LABEL name="ITCON Backup Container"
 LABEL description="A backup system based in Docker designed for Drupal backups to MinIO"
 LABEL author="Michael R. Bagnall <mbagnall@itcon-inc.com>"
 LABEL vendor="ITCON Services"
-LABEL version="0.05"
+LABEL version="0.06"
 
 # Set up our standard binary paths.
 ENV PATH /usr/local/src/vendor/bin/:/usr/local/rvm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -15,6 +15,9 @@ ENV TERM xterm
 
 # Fix command line compile issue with bundler.
 ENV LC_ALL en_US.utf8
+
+# Version string
+ENV VERSION v0.06
 
 # Install and enable repositories
 RUN yum -y update && \
