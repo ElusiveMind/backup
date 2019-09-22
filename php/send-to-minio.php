@@ -160,9 +160,12 @@ function send_html_email($html) {
     $mail->SMTPDebug = $_SERVER['SMTP_DEBUG']; // Enable verbose debug output
     $mail->isSMTP(); // Set mailer to use SMTP
     $mail->Host = $_SERVER['SMTP_HOSTNAME']; // Specify main and backup SMTP servers
+
     $mail->SMTPAuth = $_SERVER['SMTP_AUTH']; // Enable SMTP authentication
-    $mail->Username = $_SERVER['SMTP_USERNAME']; // SMTP username
-    $mail->Password = $_SERVER['SMTP_PASSWORD']; // SMTP password
+    if ($_SERVER['SMTP_AUTH'] != 0) {
+      $mail->Username = $_SERVER['SMTP_USERNAME']; // SMTP username
+      $mail->Password = $_SERVER['SMTP_PASSWORD']; // SMTP password
+    }
 
     if ($_SERVER['SMTP_PORT'] != 25) {
       $mail->SMTPSecure = 'tls';
