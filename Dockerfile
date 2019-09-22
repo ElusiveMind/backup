@@ -58,7 +58,7 @@ ADD bash /bash
 ADD php /php
 
 #kick off cron
-ADD cron/minio-cron /etc/cron.d/1minio
+ADD cron/1minio /etc/cron.d/1minio
 RUN chmod 0644 /etc/cron.d/1minio
 
 RUN crontab /etc/cron.d/minio-cron
