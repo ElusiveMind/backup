@@ -5,7 +5,7 @@ LABEL name="ITCON Backup Container"
 LABEL description="A backup system based in Docker designed for Drupal backups to MinIO"
 LABEL author="Michael R. Bagnall <mbagnall@itcon-inc.com>"
 LABEL vendor="ITCON Services"
-LABEL version="0.04"
+LABEL version="0.05"
 
 # Set up our standard binary paths.
 ENV PATH /usr/local/src/vendor/bin/:/usr/local/rvm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -55,8 +55,8 @@ ADD bash /bash
 ADD php /php
 
 #kick off cron
-ADD cron/minio-cron /etc/cron.d/minio-cron
-RUN chmod 0644 /etc/cron.d/minio-cron
+ADD cron/minio-cron /etc/cron.d/1minio
+RUN chmod 0644 /etc/cron.d/1minio
 
 RUN crontab /etc/cron.d/minio-cron
 
