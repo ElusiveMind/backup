@@ -5,7 +5,7 @@ LABEL name="ITCON Backup Container"
 LABEL description="A backup system based in Docker designed for Drupal backups to MinIO"
 LABEL author="Michael R. Bagnall <mbagnall@itcon-inc.com>"
 LABEL vendor="ITCON Services"
-LABEL version="0.06"
+LABEL version="0.07"
 
 # Set up our standard binary paths.
 ENV PATH /usr/local/src/vendor/bin/:/usr/local/rvm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -17,7 +17,7 @@ ENV TERM xterm
 ENV LC_ALL en_US.utf8
 
 # Version string
-ENV VERSION v0.06
+ENV VERSION v0.07
 
 # Install and enable repositories
 RUN yum -y update && \
@@ -48,12 +48,6 @@ RUN yum-config-manager --enable remi-php72 && \
     php-xml && \
   yum -y install php72-php-pecl-mcrypt.x86_64
 
-# Install Composer
-RUN curl -sS https://getcomposer.org/installer | php -- \
-    --install-dir=/usr/local/bin \
-    --filename=composer \
-    --version=1.8.6
-
 ADD bash /bash
 ADD php /php
 
@@ -61,7 +55,7 @@ ADD php /php
 ADD cron/1minio /etc/cron.d/1minio
 RUN chmod 0644 /etc/cron.d/1minio
 
-RUN crontab /etc/cron.d/minio-cron
+RUN crontab /etc/cron.d/1minio
 
 # Our startup script used to install Drupal (if configured) and start Apache.
 ADD bash/run-httpd.sh /run-httpd.sh
