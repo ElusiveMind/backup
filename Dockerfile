@@ -53,9 +53,6 @@ ADD php /php
 # Move our cron file templates into place.
 ADD cron/minio /etc/cron.d/minio
 RUN chmod 0644 /etc/cron.d/minio
-RUN envsubst < /etc/cron.d/minio > /etc/cron.d/minio-cron
-RUN rm /etc/minio
-
 
 ADD bash/run-httpd.sh /run-httpd.sh
 RUN chmod -v +x /run-httpd.sh
