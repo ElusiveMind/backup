@@ -45,7 +45,7 @@ if (!is_dir('/app/backups')) {
   mkdir('/app/backups');
 }
 
-if (!file_exists("/app/backups/$database-$data_prefix.$today.sql")) {
+if (!file_exists("/app/backups/$database-$data_prefix.$today.sql.gz")) {
   $mysql = `mysqldump -u$user -p$pass -h$host $database > /app/backups/$database-$data_prefix.$today.sql`;
   $gzip = `gzip /app/backups/$database-$data_prefix.$today.sql`;
 }
@@ -63,7 +63,8 @@ $paths = [
 ];
 
 
-$html = 'Backup Container ' . $_SERVER['VERSION_NUMBER'] . ' - Michael R. Bagnall - mbagnall@itcon-inc.com<br />';
+$html = $_SERVER['SITE_IDENTIFIER'] . "<br />";
+$html .= 'Backup Container ' . $_SERVER['VERSION_NUMBER'] . ' - Michael R. Bagnall - mbagnall@itcon-inc.com<br />';
 $html .= 'Data Prefix: ' . $_SERVER['DATA_PREFIX'] . ' / Files Prefix: ' . $_SERVER['FILES_PREFIX']. '<hr />';
 
 /**
@@ -159,13 +160,17 @@ function send_html_email($html) {
     $mail->SMTPDebug = $_SERVER['SMTP_DEBUG']; // Enable verbose debug output
     $mail->isSMTP(); // Set mailer to use SMTP
     $mail->Host = $_SERVER['SMTP_HOSTNAME']; // Specify main and backup SMTP servers
-    $mail->SMTPAuth = TRUE; // Enable SMTP authentication
+    $mail->SMTPAuth = $_SERVER['SMTP_AUTH']; // Enable SMTP authentication
     $mail->Username = $_SERVER['SMTP_USERNAME']; // SMTP username
     $mail->Password = $_SERVER['SMTP_PASSWORD']; // SMTP password
 
     if ($_SERVER['SMTP_PORT'] != 25) {
       $mail->SMTPSecure = 'tls';
       $_SERVER['SMTP_PORT'] = 587;
+    }
+    else {
+      $mail->SMTPSecure = '';
+      $mail->SMTPAutoTLS = FALSE;
     }
 
     $mail->Port = $_SERVER['SMTP_PORT'];

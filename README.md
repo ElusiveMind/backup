@@ -64,6 +64,9 @@ The prefix to place as part of the file name. Can be used to identify backups gi
 **DATA_PREFIX**  
 The same as a files prefix, but applies to the database export. It is worthy of noting that the databases will already be prefixed with the `MYSQL_DATABASE` setting as a matter of course.
 
+**SMTP_AUTH**  
+Boolean. Sets whether the SMTP server requires authentication or not.  
+
 **SITE_IDENTIFIER**  
 A string describing the site being backed up.  
 
