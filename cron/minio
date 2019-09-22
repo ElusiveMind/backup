@@ -1,0 +1,1 @@
+$INTERVAL cd /php; /usr/bin/php send-to-minio.php

@@ -10,6 +10,14 @@ use Aws\S3\DeleteObject;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
+$sitename = (!empty($_SERVER['SITE_IDENTIFIER'])) ? $_SERVER['SITE_IDENTIFIER'] : "Identifier Not Provided.";
+// If we are not properly configured, then we cannot continue.
+if (empty($_SERVER['MINIO_ENDPOINT']) || empty($_SERVER['MYSQL_HOST'])) {
+  $html = "Unable to run MinIO Backup script on " . $sitename . ". Check your environment variables for this container.";
+  send_html_email($html);
+  exit();
+}
+
 $s3 = new S3Client([
   'version' => 'latest',
   'region'  => 'us-east-1',
@@ -55,7 +63,8 @@ $paths = [
 ];
 
 
-$html = 'Backup Container ' . $_SERVER['VERSION_NUMBER'] . ' - Michael R. Bagnall - <mbagnall@itcon-inc.com><hr />';
+$html = 'Backup Container ' . $_SERVER['VERSION_NUMBER'] . ' - Michael R. Bagnall - mbagnall@itcon-inc.com<br />';
+$html .= 'Data Prefix: ' . $_SERVER['DATA_PREFIX'] . ' / Files Prefix: ' . $_SERVER['FILES_PREFIX']. '<hr />';
 
 /**
  * Step One: Delete any files older than 14 days.
@@ -134,32 +143,46 @@ foreach ($paths as $bucket => $info) {
   }
 }
 
-// Instantiation and passing `true` enables exceptions
-$mail = new PHPMailer(TRUE);
+send_html_email($html);
 
-try {
-  //Server settings
-  //$mail->SMTPDebug = 2; // Enable verbose debug output
-  $mail->isSMTP(); // Set mailer to use SMTP
-  $mail->Host = $_SERVER['SMTP_HOSTNAME']; // Specify main and backup SMTP servers
-  $mail->SMTPAuth = TRUE; // Enable SMTP authentication
-  $mail->Username = $_SERVER['SMTP_USERNAME']; // SMTP username
-  $mail->Password = $_SERVER['SMTP_PASSWORD']; // SMTP password
-  $mail->SMTPSecure = 'tls'; // Enable TLS encryption, `ssl` also accepted
-  $mail->Port = 587; // TCP port to connect to
+function send_html_email($html) {
 
-  //Recipients
-  $mail->setFrom($_SERVER['SMTP_FROM']);
-  $mail->addAddress($_SERVER['SMTP_TO']);
-  $mail->addReplyTo($_SERVER['SMTP_FROM']);
+  if (empty($_SERVER['SMTP_HOSTNAME'])) {
+    return FALSE;
+  }
 
-  // Content
-  $mail->isHTML(true);
-  $mail->Subject = 'Completed Backup Server Run';
-  $mail->Body = $html;
-  $mail->AltBody = 'You need an HTML email program to read this email. Get with the century';
+  // Instantiation and passing `true` enables exceptions
+  $mail = new PHPMailer(TRUE);
 
-  $mail->send();
-} catch (Exception $e) {
-  echo "Message could not be sent. Mailer Error: {$mail->ErrorInfo}";
+  try {
+    //Server settings
+    $mail->SMTPDebug = $_SERVER['SMTP_DEBUG']; // Enable verbose debug output
+    $mail->isSMTP(); // Set mailer to use SMTP
+    $mail->Host = $_SERVER['SMTP_HOSTNAME']; // Specify main and backup SMTP servers
+    $mail->SMTPAuth = TRUE; // Enable SMTP authentication
+    $mail->Username = $_SERVER['SMTP_USERNAME']; // SMTP username
+    $mail->Password = $_SERVER['SMTP_PASSWORD']; // SMTP password
+
+    if ($_SERVER['SMTP_PORT'] != 25) {
+      $mail->SMTPSecure = 'tls';
+      $_SERVER['SMTP_PORT'] = 587;
+    }
+
+    $mail->Port = $_SERVER['SMTP_PORT'];
+
+    // Set Recipients.
+    $mail->setFrom($_SERVER['SMTP_FROM']);
+    $mail->addAddress($_SERVER['SMTP_TO']);
+    $mail->addReplyTo($_SERVER['SMTP_FROM']);
+
+    // Content
+    $mail->isHTML(true);
+    $mail->Subject = 'Completed Backup Server Run';
+    $mail->Body = $html;
+    $mail->AltBody = 'You need an HTML email program to read this email. Get with the century';
+
+    $mail->send();
+  } catch (Exception $e) {
+    echo "Message could not be sent. Mailer Error: {$mail->ErrorInfo}";
+  }
 }

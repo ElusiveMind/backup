@@ -5,7 +5,7 @@ LABEL name="ITCON Backup Container"
 LABEL description="A backup system based in Docker designed for Drupal backups to MinIO"
 LABEL author="Michael R. Bagnall <mbagnall@itcon-inc.com>"
 LABEL vendor="ITCON Services"
-LABEL version="0.07"
+LABEL version="0.08"
 
 # Set up our standard binary paths.
 ENV PATH /usr/local/src/vendor/bin/:/usr/local/rvm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -17,7 +17,7 @@ ENV TERM xterm
 ENV LC_ALL en_US.utf8
 
 # Version string
-ENV VERSION v0.07
+ENV VERSION v0.08
 
 # Install and enable repositories
 RUN yum -y update && \
@@ -51,11 +51,9 @@ RUN yum-config-manager --enable remi-php72 && \
 ADD bash /bash
 ADD php /php
 
-#kick off cron
-ADD cron/1minio /etc/cron.d/1minio
-RUN chmod 0644 /etc/cron.d/1minio
-
-RUN crontab /etc/cron.d/1minio
+# Move our cron file templates into place.
+ADD cron/minio /etc/cron.d/minio
+RUN chmod 0644 /etc/cron.d/minio
 
 # Our startup script used to install Drupal (if configured) and start Apache.
 ADD bash/run-httpd.sh /run-httpd.sh
