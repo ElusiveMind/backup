@@ -11,4 +11,4 @@ rm /etc/cron.d/minio
 pkill crond
 
 # Restart crond in the foreground
-exec crond -pn
+exec crond -psn -x text
