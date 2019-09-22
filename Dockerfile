@@ -11,7 +11,7 @@ LABEL version="0.09"
 ENV VERSION_NUMBER v0.09
 
 RUN apt update
-RUN apt-get mysql-common
+RUN apt-get install mysql-common
 RUN apt-get install default-mysql-client
 
 ADD bash /bash
