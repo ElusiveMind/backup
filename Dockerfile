@@ -10,6 +10,8 @@ LABEL version="0.09"
 # Version string
 ENV VERSION_NUMBER v0.09
 
+RUN apt install default-mysql-client
+
 ADD bash /bash
 ADD php /php
 
