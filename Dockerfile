@@ -19,8 +19,8 @@ RUN service cron stop
 
 ADD cron/minio /etc/cron.d/minio
 RUN chmod 0644 /etc/cron.d/minio
-RUN crontab /etc/cron.d/1minio
-RUN envsubst < /etc/cron.d/1minio > /etc/cron.d/minio-cron
+RUN crontab /etc/cron.d/minio
+RUN envsubst < /etc/cron.d/minio > /etc/cron.d/minio-cron
 RUN rm /etc/minio1
 RUN crontab /etc/cron.d/minio-cron
 
