@@ -1,5 +1,12 @@
 <?php
 
+/**
+ * send-to-minio.php
+ * A script to send backup files to a MinIO/S3 mount.
+ * This is primarily made for USDA eWAPS in mind.
+ * by Michael R. Bagnall <mbagnall@itcon-inc.com> - September 23, 2019
+ */
+
 require 'vendor/autoload.php';
 
 use Aws\S3\S3Client;
@@ -45,12 +52,13 @@ if (!is_dir('/app/backups')) {
   mkdir('/app/backups');
 }
 
+// Get a current snapshot of the MySQL database provided a gzipped copy does not exist.
 if (!file_exists("/app/backups/$database-$data_prefix.$today.sql.gz")) {
   $mysql = `mysqldump -u$user -p$pass -h$host $database > /app/backups/$database-$data_prefix.$today.sql`;
-  $gzip = `gzip /app/backups/$database-$data_prefix.$today.sql`;
+  $gzip = `gzip -f /app/backups/$database-$data_prefix.$today.sql`;
 }
 
-// Then get a copy of the files directory
+// Then get a copy of the files directory if the gzip does not already exist.
 if (!file_exists("/app/backups/$files_prefix.$today.tar.gz")) {
   $files = `cd $files_folder_parent; tar -czf /app/backups/$files_prefix.$today.tar.gz $files_folder_name`;
 }
@@ -62,8 +70,11 @@ $paths = [
   ],
 ];
 
-
-$html = $_SERVER['SITE_IDENTIFIER'] . "<br />";
+// Begin our HTML output.
+$html = '<html><head><title>' . $_SERVER['SITE_IDENTIFIER'] . '</title>';
+$html .= '<style>body { color: #FFFFFF: background-color: #000000; font-family: Tahoma, Arial; font-size: 14pt; }</style>';
+$html .= '</head><body><table border="0" width="960" align="center"><tr><td>';
+$html .= '<b>Backup Report For:</b> ' . $_SERVER['SITE_IDENTIFIER'] . "<br />";
 $html .= 'Backup Container ' . $_SERVER['VERSION_NUMBER'] . ' - Michael R. Bagnall - mbagnall@itcon-inc.com<br />';
 $html .= 'Data Prefix: ' . $_SERVER['DATA_PREFIX'] . ' / Files Prefix: ' . $_SERVER['FILES_PREFIX']. '<hr />';
 
@@ -80,7 +91,7 @@ foreach ($paths as $bucket => $info) {
   } catch (S3Exception $e) {
     echo $e->getMessage();
   }
-  if (!empty($result['Contents'])) {
+  if (count($result['Contents'] > 0)) {
     $html .= '<ul>';
     foreach ($result['Contents'] as $key => $content) {
       $last_modified = strtotime($content['LastModified']->__toString());
@@ -97,7 +108,7 @@ foreach ($paths as $bucket => $info) {
     $html .= '</ul>';
   }
   else {
-    $html .= '<i>There are no files queued for deletion.</i><br /><br />';
+    $html .= '<b>There are no files queued for deletion.</b><br /><br />';
   }
 }
 
@@ -144,10 +155,21 @@ foreach ($paths as $bucket => $info) {
   }
 }
 
+// Close out our HTML.
+$html .= '</td></tr></table></body></html>';
+
+// Send the email.
 send_html_email($html);
 
+/**
+ * send_html_email($html)
+ * Send the email contained in the argument to the recipients specified in the
+ * environment variables. See the README for more information on the environment
+ * variables being used.
+ */
 function send_html_email($html) {
 
+  // If we do not have an SMTP hostname then we really cannot do anything.
   if (empty($_SERVER['SMTP_HOSTNAME'])) {
     return FALSE;
   }
@@ -156,15 +178,14 @@ function send_html_email($html) {
   $mail = new PHPMailer(TRUE);
 
   try {
-    //Server settings
-    $mail->SMTPDebug = $_SERVER['SMTP_DEBUG']; // Enable verbose debug output
-    $mail->isSMTP(); // Set mailer to use SMTP
-    $mail->Host = $_SERVER['SMTP_HOSTNAME']; // Specify main and backup SMTP servers
+    $mail->isSMTP();
+    $mail->SMTPDebug = $_SERVER['SMTP_DEBUG'];
+    $mail->Host = $_SERVER['SMTP_HOSTNAME'];
 
-    $mail->SMTPAuth = $_SERVER['SMTP_AUTH']; // Enable SMTP authentication
+    $mail->SMTPAuth = $_SERVER['SMTP_AUTH'];
     if ($_SERVER['SMTP_AUTH'] != 0) {
-      $mail->Username = $_SERVER['SMTP_USERNAME']; // SMTP username
-      $mail->Password = $_SERVER['SMTP_PASSWORD']; // SMTP password
+      $mail->Username = $_SERVER['SMTP_USERNAME'];
+      $mail->Password = $_SERVER['SMTP_PASSWORD'];
     }
 
     if ($_SERVER['SMTP_PORT'] != 25) {
@@ -185,12 +206,13 @@ function send_html_email($html) {
 
     // Content
     $mail->isHTML(true);
-    $mail->Subject = 'Completed Backup Server Run';
+    $mail->Subject = $_SERVER['SITE_IDENTIFIER'] . ' Server Backup Report';
     $mail->Body = $html;
-    $mail->AltBody = 'You need an HTML email program to read this email. Get with the century';
+    $mail->AltBody = 'You need an HTML email program to read this email.';
 
     $mail->send();
-  } catch (Exception $e) {
+  }
+  catch (Exception $e) {
     echo "Message could not be sent. Mailer Error: {$mail->ErrorInfo}";
   }
 }

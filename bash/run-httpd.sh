@@ -7,8 +7,5 @@ envsubst < /etc/cron.d/minio > /etc/cron.d/minio-cron
 crontab /etc/cron.d/minio-cron
 rm /etc/cron.d/minio
 
-# Stop crond
-pkill crond
-
 # Restart crond in the foreground
 exec cron -f
