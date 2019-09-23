@@ -14,7 +14,7 @@ RUN apt update
 RUN apt-get -y install mysql-common
 RUN apt-get -y install default-mysql-client
 RUN apt-get -y install cron
-RUN apt-get -y gettext
+RUN apt-get -y install gettext
 RUN service cron stop
 
 ADD cron/minio /etc/cron.d/minio
