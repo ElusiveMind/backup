@@ -14,10 +14,17 @@ RUN apt update
 RUN apt-get -y install mysql-common
 RUN apt-get -y install default-mysql-client
 RUN apt-get -y install cron
-RUN systemctl stop cron
+RUN apt-git -y gettext
+RUN service cron stop
 
+ADD cron/minio /etc/cron.d/minio
+RUN chmod 0644 /etc/cron.d/minio
+RUN crontab /etc/cron.d/1minio
+RUN envsubst < /etc/cron.d/1minio > /etc/cron.d/minio-cron
+RUN rm /etc/minio1
+RUN crontab /etc/cron.d/minio-cron
 
 ADD bash /bash
 ADD php /php
 
-CMD ["php", "/php/send-to-minio.php"]
+CMD ["cron", "-f"]
