@@ -7,7 +7,7 @@
  * by Michael R. Bagnall <mbagnall@itcon-inc.com> - September 23, 2019
  */
 
-require 'vendor/autoload.php';
+require '/vendor/autoload.php';
 
 use Aws\S3\S3Client;
 use Aws\Exception\AwsException;
