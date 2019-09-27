@@ -91,7 +91,7 @@ foreach ($paths as $bucket => $info) {
   } catch (S3Exception $e) {
     echo $e->getMessage();
   }
-  if (count($result['Contents'] > 0)) {
+  if (isset($result['Contents']) && count($result['Contents'] > 0)) {
     $html .= '<ul>';
     foreach ($result['Contents'] as $key => $content) {
       $last_modified = strtotime($content['LastModified']->__toString());
