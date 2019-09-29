@@ -1,1 +1,1 @@
-$INTERVAL /usr/local/bin/php send-to-minio.php
+0 5 * * * /usr/local/bin/php send-to-minio.php
