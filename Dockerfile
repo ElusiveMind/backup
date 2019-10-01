@@ -14,7 +14,7 @@ RUN apt update
 RUN apt-get -y install mysql-common
 RUN apt-get -y install default-mysql-client
 RUN apt-get -y install cron
-#RUN apt-get -y install gettext procps nano
+RUN apt-get -y install gettext procps nano
 
 COPY cron/minio /etc/cron.d/minio
 RUN chmod 0644 /etc/cron.d/minio
