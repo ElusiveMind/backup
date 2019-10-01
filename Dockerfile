@@ -21,7 +21,7 @@ RUN chmod 0644 /etc/cron.d/minio
 
 ADD php /php
 
-ADD conf/run-cron.sh /run-cron.sh
+ADD bash/run-cron.sh /run-cron.sh
 RUN chmod -v +x /run-cron.sh
 
 CMD ["run-cron.sh"]
