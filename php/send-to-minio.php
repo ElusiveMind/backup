@@ -17,9 +17,16 @@ use Aws\S3\DeleteObject;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
-$sitename = (!empty($_SERVER['SITE_IDENTIFIER'])) ? $_SERVER['SITE_IDENTIFIER'] : "Identifier Not Provided.";
+$site_identifier = getenv('SITE_IDENTIFIER');
+$minio_endpoint = getenv('MINIO_ENDPOINT');
+$mysql_host = getenv('MYSQL_HOST');
+$minio_key = getenv('MINIO_KEY');
+$minio_secret = getenv('MINIO_SECRET');
+
+
+$sitename = (!empty($site_identifier)) ? $site_identifier : "Identifier Not Provided.";
 // If we are not properly configured, then we cannot continue.
-if (empty($_SERVER['MINIO_ENDPOINT']) || empty($_SERVER['MYSQL_HOST'])) {
+if (empty($minio_endpoint) || empty($mysql_host)) {
   $html = "Unable to run MinIO Backup script on " . $sitename . ". Check your environment variables for this container.";
   send_html_email($html);
   exit();
@@ -28,22 +35,22 @@ if (empty($_SERVER['MINIO_ENDPOINT']) || empty($_SERVER['MYSQL_HOST'])) {
 $s3 = new S3Client([
   'version' => 'latest',
   'region'  => 'us-east-1',
-  'endpoint' => $_SERVER['MINIO_ENDPOINT'],
+  'endpoint' => $minio_endpoint,
   'use_path_style_endpoint' => true,
   'credentials' => [
-    'key'    => $_SERVER['MINIO_KEY'],
-    'secret' => $_SERVER['MINIO_SECRET'],
+    'key'    => $minio_key,
+    'secret' =>$minio_secret,
   ],
 ]);
 
-$user = $_SERVER['MYSQL_USER'];
-$pass = $_SERVER['MYSQL_PASS'];
-$host = $_SERVER['MYSQL_HOST'];
-$database = $_SERVER['MYSQL_DATABASE'];
-$data_prefix = $_SERVER['DATA_PREFIX'];
-$files_prefix = $_SERVER['FILES_PREFIX'];
-$files_folder_parent = $_SERVER['FILES_FOLDER_PARENT'];
-$files_folder_name = $_SERVER['FILES_FOLDER_NAME'];
+$user = getenv('MYSQL_USER');
+$pass = getenv('MYSQL_PASS');
+$host = getenv('MYSQL_HOST');
+$database = getenv('MYSQL_DATABASE');
+$data_prefix = getenv('DATA_PREFIX');
+$files_prefix = getenv('FILES_PREFIX');
+$files_folder_parent = getenv('FILES_FOLDER_PARENT');
+$files_folder_name = getenv('FILES_FOLDER_NAME');
 
 // The first thing we have to do is get the mysqldump.
 $today = date('Y-m-d');
@@ -64,19 +71,19 @@ if (!file_exists("/app/backups/$files_prefix.$today.tar.gz")) {
 }
 
 $paths = [
-  $_SERVER['MINIO_BUCKET'] => [
+  $minio_bucket => [
     'path' => '/app/backups',
     'glob' => '*.gz',
   ],
 ];
 
 // Begin our HTML output.
-$html = '<html><head><title>' . $_SERVER['SITE_IDENTIFIER'] . '</title>';
+$html = '<html><head><title>' . $site_identifier . '</title>';
 $html .= '<style>body { color: #FFFFFF: background-color: #000000; font-family: Tahoma, Arial; font-size: 14pt; }</style>';
 $html .= '</head><body><table border="0" width="960" align="center"><tr><td>';
-$html .= '<b>Backup Report For:</b> ' . $_SERVER['SITE_IDENTIFIER'] . "<br />";
-$html .= 'Backup Container ' . $_SERVER['VERSION_NUMBER'] . ' - Michael R. Bagnall - mbagnall@itcon-inc.com<br />';
-$html .= 'Data Prefix: ' . $_SERVER['DATA_PREFIX'] . ' / Files Prefix: ' . $_SERVER['FILES_PREFIX']. '<hr />';
+$html .= '<b>Backup Report For:</b> ' . $site_identifier . "<br />";
+$html .= 'Backup Container ' . getenv('VERSION_NUMBER') . ' - Michael R. Bagnall - mbagnall@itcon-inc.com<br />';
+$html .= 'Data Prefix: ' . getenv('DATA_PREFIX') . ' / Files Prefix: ' . getenv('FILES_PREFIX'). '<hr />';
 
 /**
  * Step One: Delete any files older than 14 days.
@@ -96,7 +103,7 @@ foreach ($paths as $bucket => $info) {
     foreach ($result['Contents'] as $key => $content) {
       $last_modified = strtotime($content['LastModified']->__toString());
       // Entries expire and are deleted after 14 days.
-      $expires = time() - (60*60*24) * $_SERVER['MINIO_FILE_TTL'];
+      $expires = time() - (60*60*24) * getenv('MINIO_FILE_TTL');
       if ($last_modified < $expires) {
         $delete = $s3->DeleteObject([
           'Bucket' => $bucket,
@@ -170,7 +177,7 @@ send_html_email($html);
 function send_html_email($html) {
 
   // If we do not have an SMTP hostname then we really cannot do anything.
-  if (empty($_SERVER['SMTP_HOSTNAME'])) {
+  if (empty(getenv('SMTP_HOSTNAME'))) {
     return FALSE;
   }
 
@@ -179,34 +186,35 @@ function send_html_email($html) {
 
   try {
     $mail->isSMTP();
-    $mail->SMTPDebug = $_SERVER['SMTP_DEBUG'];
-    $mail->Host = $_SERVER['SMTP_HOSTNAME'];
+    $mail->SMTPDebug = getenv('SMTP_DEBUG');
+    $mail->Host = getenv('SMTP_HOSTNAME');
 
-    $mail->SMTPAuth = $_SERVER['SMTP_AUTH'];
-    if ($_SERVER['SMTP_AUTH'] != 0) {
-      $mail->Username = $_SERVER['SMTP_USERNAME'];
-      $mail->Password = $_SERVER['SMTP_PASSWORD'];
+    $mail->SMTPAuth = getenv('SMTP_AUTH');
+    if (getenv('SMTP_AUTH') != 0) {
+      $mail->Username = getenv('SMTP_USERNAME');
+      $mail->Password = getenv('SMTP_PASSWORD');
     }
 
-    if ($_SERVER['SMTP_PORT'] != 25) {
+    $smtp_port = getenv('SMTP_PORT');
+    if ($smtp_port != 25) {
       $mail->SMTPSecure = 'tls';
-      $_SERVER['SMTP_PORT'] = 587;
+      $smtp_port = 587;
     }
     else {
       $mail->SMTPSecure = '';
       $mail->SMTPAutoTLS = FALSE;
     }
 
-    $mail->Port = $_SERVER['SMTP_PORT'];
+    $mail->Port = $smtp_port;
 
     // Set Recipients.
-    $mail->setFrom($_SERVER['SMTP_FROM']);
-    $mail->addAddress($_SERVER['SMTP_TO']);
-    $mail->addReplyTo($_SERVER['SMTP_FROM']);
+    $mail->setFrom(getenv('SMTP_FROM'));
+    $mail->addAddress(getenv('SMTP_TO'));
+    $mail->addReplyTo(getenv('SMTP_FROM'));
 
     // Content
     $mail->isHTML(true);
-    $mail->Subject = $_SERVER['SITE_IDENTIFIER'] . ' Server Backup Report';
+    $mail->Subject = $site_identifier . ' Server Backup Report';
     $mail->Body = $html;
     $mail->AltBody = 'You need an HTML email program to read this email.';
 
