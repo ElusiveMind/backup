@@ -24,5 +24,5 @@ ADD php /php
 ADD bash/run-cron.sh /run-cron.sh
 RUN chmod -v +x /run-cron.sh
 
-CMD ["run-cron.sh"]
+CMD ["/run-cron.sh"]
 
