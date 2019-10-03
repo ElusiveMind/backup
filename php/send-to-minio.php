@@ -7,8 +7,11 @@
  * by Michael R. Bagnall <mbagnall@itcon-inc.com> - September 23, 2019
  */
 
+send_message('Today: ' . date('m-d-Y H:i:s'));
+send_message('Include all of the classes we need to autoload');
 require '/php/vendor/autoload.php';
 
+send_message('Load in our classes.');
 use Aws\S3\S3Client;
 use Aws\Exception\AwsException;
 use Aws\S3\ObjectUploader;
@@ -17,21 +20,24 @@ use Aws\S3\DeleteObject;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
+send_message('Define our variables from environment variables.');
 $site_identifier = getenv('SITE_IDENTIFIER');
 $minio_endpoint = getenv('MINIO_ENDPOINT');
 $mysql_host = getenv('MYSQL_HOST');
 $minio_key = getenv('MINIO_KEY');
 $minio_secret = getenv('MINIO_SECRET');
 
-
+send_message('Pre-systems check');
 $sitename = (!empty($site_identifier)) ? $site_identifier : "Identifier Not Provided.";
 // If we are not properly configured, then we cannot continue.
 if (empty($minio_endpoint) || empty($mysql_host)) {
+  send_message('Unable to run MinIO backup script.');
   $html = "Unable to run MinIO Backup script on " . $sitename . ". Check your environment variables for this container.";
   send_html_email($html);
   exit();
 }
 
+send_message('Open our S3 clent to wherever');
 $s3 = new S3Client([
   'version' => 'latest',
   'region'  => 'us-east-1',
@@ -39,10 +45,11 @@ $s3 = new S3Client([
   'use_path_style_endpoint' => true,
   'credentials' => [
     'key'    => $minio_key,
-    'secret' =>$minio_secret,
+    'secret' => $minio_secret,
   ],
 ]);
 
+send_message('More environmental definitions');
 $user = getenv('MYSQL_USER');
 $pass = getenv('MYSQL_PASS');
 $host = getenv('MYSQL_HOST');
@@ -51,6 +58,7 @@ $data_prefix = getenv('DATA_PREFIX');
 $files_prefix = getenv('FILES_PREFIX');
 $files_folder_parent = getenv('FILES_FOLDER_PARENT');
 $files_folder_name = getenv('FILES_FOLDER_NAME');
+$minio_bucket = getenv('MINIO_BUCKET');
 
 // The first thing we have to do is get the mysqldump.
 $today = date('Y-m-d');
@@ -59,12 +67,14 @@ if (!is_dir('/app/backups')) {
   mkdir('/app/backups');
 }
 
+send_message('Extract and encrypt the MySQL Database');
 // Get a current snapshot of the MySQL database provided a gzipped copy does not exist.
 if (!file_exists("/app/backups/$database-$data_prefix.$today.sql.gz")) {
   $mysql = `mysqldump -u$user -p'$pass' -h$host $database > /app/backups/$database-$data_prefix.$today.sql`;
   $gzip = `gzip -f /app/backups/$database-$data_prefix.$today.sql`;
 }
 
+send_message('Pack up the files directory');
 // Then get a copy of the files directory if the gzip does not already exist.
 if (!file_exists("/app/backups/$files_prefix.$today.tar.gz")) {
   $files = `cd $files_folder_parent; tar -czf /app/backups/$files_prefix.$today.tar.gz $files_folder_name`;
@@ -85,6 +95,7 @@ $html .= '<b>Backup Report For:</b> ' . $site_identifier . "<br />";
 $html .= 'Backup Container ' . getenv('VERSION_NUMBER') . ' - Michael R. Bagnall - mbagnall@itcon-inc.com<br />';
 $html .= 'Data Prefix: ' . getenv('DATA_PREFIX') . ' / Files Prefix: ' . getenv('FILES_PREFIX'). '<hr />';
 
+send_message('Do Our Deletions');
 /**
  * Step One: Delete any files older than 14 days.
  */
@@ -119,6 +130,7 @@ foreach ($paths as $bucket => $info) {
   }
 }
 
+send_message("Do our upload");
 /**
  * Step Two: Upload any new files transferred in via rsync
  */
@@ -132,6 +144,7 @@ foreach ($paths as $bucket => $info) {
       $html .= '<li><b>' . $info['path'] . ':</b> ';
       $response = $s3->doesObjectExist($bucket, $filename);
       if ($response != '1') {
+        send_message("<i>Adding:</i> $bucket/$filename</li>");
         $html .= "<i>Adding:</i> $bucket/$filename</li>";
 
         // Using stream instead of file path
@@ -156,6 +169,7 @@ foreach ($paths as $bucket => $info) {
       }
       else {
         $html .= $bucket . '/' . $filename . ' <i>Already Exists</i></li>';
+        send_message($bucket . '/' . $filename . ' <i>Already Exists</i></li>');
       }
       unlink($info['path'] .'/' . $filename);
     }
@@ -223,4 +237,10 @@ function send_html_email($html) {
   catch (Exception $e) {
     echo "Message could not be sent. Mailer Error: {$mail->ErrorInfo}";
   }
+}
+
+function send_message($text) {
+  //$fh = fopen('/app/backups/message.txt', 'a');
+  //fwrite($fh, $text . "\n");
+  //fclose($fh);
 }
