@@ -70,7 +70,7 @@ if (!is_dir('/app/backups')) {
 send_message('Extract and encrypt the MySQL Database');
 // Get a current snapshot of the MySQL database provided a gzipped copy does not exist.
 if (!file_exists("/app/backups/$database-$data_prefix.$today.sql.gz")) {
-  $mysql = `mysqldump -u$user -p'$pass' -h$host $database > /app/backups/$database-$data_prefix.$today.sql`;
+  $mysql = `mysqldump -u$user -p$pass -h$host $database > /app/backups/$database-$data_prefix.$today.sql`;
   $gzip = `gzip -f /app/backups/$database-$data_prefix.$today.sql`;
 }
 
