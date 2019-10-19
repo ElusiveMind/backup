@@ -72,6 +72,8 @@ send_message('Extract and encrypt the MySQL Database');
 if (!file_exists("/app/backups/$database-$data_prefix.$today.sql.gz")) {
   $mysql = `mysqldump -u$user -p${MYSQL_PASS} -h$host $database > /app/backups/$database-$data_prefix.$today.sql`;
   $gzip = `gzip -f /app/backups/$database-$data_prefix.$today.sql`;
+
+  $db_size = `mysql -uroot -p$rootpass -h$host information_schema 'SELECT ROUND(SUM(data_length + index_length) / 1024 / 1024, 1) as data_size FROM information_schema.tables WHERE table_schema = \'$database\''`; 
 }
 
 send_message('Pack up the files directory');
@@ -93,7 +95,8 @@ $html .= '<style>body { color: #FFFFFF: background-color: #000000; font-family: 
 $html .= '</head><body><table border="0" width="960" align="center"><tr><td>';
 $html .= '<b>Backup Report For:</b> ' . $site_identifier . "<br />";
 $html .= 'Backup Container ' . getenv('VERSION_NUMBER') . ' - Michael R. Bagnall - mbagnall@itcon-inc.com<br />';
-$html .= 'Data Prefix: ' . getenv('DATA_PREFIX') . ' / Files Prefix: ' . getenv('FILES_PREFIX'). '<hr />';
+$html .= 'Data Prefix: ' . getenv('DATA_PREFIX') . ' / Files Prefix: ' . getenv('FILES_PREFIX'). '<br />';
+$html .= 'Database Size of ' . $database . ' dump: ' . $db_size . '<hr />';
 
 send_message('Do Our Deletions');
 /**
