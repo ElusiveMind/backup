@@ -51,8 +51,8 @@ $s3 = new S3Client([
 
 send_message('More environmental definitions');
 $user = getenv('MYSQL_USER');
-$pass = escapeshellarg(getenv('MYSQL_PASS'));
-$rootpass = escapeshellarg(getenv('MYSQL_ROOTPASS'));
+$pass = getenv('MYSQL_PASS');
+$rootpass = getenv('MYSQL_ROOTPASS');
 $host = getenv('MYSQL_HOST');
 $database = getenv('MYSQL_DATABASE');
 $data_prefix = getenv('DATA_PREFIX');
@@ -71,7 +71,7 @@ if (!is_dir('/app/backups')) {
 send_message('Extract and encrypt the MySQL Database');
 // Get a current snapshot of the MySQL database provided a gzipped copy does not exist.
 if (!file_exists("/app/backups/$database-$data_prefix.$today.sql.gz")) {
-  $mysql = `mysqldump -u$user --password=$pass -h$host $database > /app/backups/$database-$data_prefix.$today.sql`;
+  $mysql = `mysqldump -u$user --password='$pass' -h$host $database > /app/backups/$database-$data_prefix.$today.sql`;
   $gzip = `gzip -f /app/backups/$database-$data_prefix.$today.sql`;
   $db_size_query = 'mysql -uroot --password=' . $rootpass . '-h' . $host . ' information_schema -e "SELECT ROUND(SUM(data_length + index_length) / 1024 / 1024, 1) as data_size FROM information_schema.tables WHERE table_schema=\'' . $database . '\' -N -s';
   $db_size = exec($db_size_query);
