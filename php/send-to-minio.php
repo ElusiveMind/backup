@@ -97,7 +97,7 @@ $html .= '</head><body><table border="0" width="960" align="center"><tr><td>';
 $html .= '<b>Backup Report For:</b> ' . $site_identifier . "<br />";
 $html .= 'Backup Container ' . getenv('VERSION_NUMBER') . ' - Michael R. Bagnall - mbagnall@itcon-inc.com<br />';
 $html .= 'Data Prefix: ' . getenv('DATA_PREFIX') . ' / Files Prefix: ' . getenv('FILES_PREFIX'). '<br />';
-$html .= 'Database Size of ' . $database . ' dump: ' . $db_size . '<hr />';
+$html .= 'Database Size of ' . $database . ' dump: ' . $db_size . ' Megabytes.<hr />';
 
 send_message('Do Our Deletions');
 /**
