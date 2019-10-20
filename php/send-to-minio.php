@@ -73,7 +73,7 @@ send_message('Extract and encrypt the MySQL Database');
 if (!file_exists("/app/backups/$database-$data_prefix.$today.sql.gz")) {
   $mysql = `mysqldump -u$user --password='$pass' -h$host $database > /app/backups/$database-$data_prefix.$today.sql`;
   $gzip = `gzip -f /app/backups/$database-$data_prefix.$today.sql`;
-  $db_size_query = 'mysql -uroot --password=' . $rootpass . '-h' . $host . ' information_schema -e "SELECT ROUND(SUM(data_length + index_length) / 1024 / 1024, 1) as data_size FROM information_schema.tables WHERE table_schema='" . $database . "' -N -s"';
+  $db_size_query = "mysql -uroot --password='" . $rootpass . "'-h'" . $host . " information_schema -e 'SELECT ROUND(SUM(data_length + index_length) / 1024 / 1024, 1) as data_size FROM information_schema.tables WHERE table_schema=$database -N -s'";
   $db_size = exec($db_size_query);
 }
 
