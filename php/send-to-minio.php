@@ -60,6 +60,8 @@ $files_prefix = getenv('FILES_PREFIX');
 $files_folder_parent = getenv('FILES_FOLDER_PARENT');
 $files_folder_name = getenv('FILES_FOLDER_NAME');
 $minio_bucket = getenv('MINIO_BUCKET');
+$skip_files = getenv('SKIP_FILES');
+$skip_database = getenv('SKIP_DATABASE');
 
 // The first thing we have to do is get the mysqldump.
 $today = date('Y-m-d');
@@ -70,7 +72,7 @@ if (!is_dir('/app/backups')) {
 
 send_message('Extract and encrypt the MySQL Database');
 // Get a current snapshot of the MySQL database provided a gzipped copy does not exist.
-if (!file_exists("/app/backups/$database-$data_prefix.$today.sql.gz")) {
+if (!file_exists("/app/backups/$database-$data_prefix.$today.sql.gz" && empty($skip_database))) {
   $mysql = `mysqldump -u$user --password='$pass' -h$host $database > /app/backups/$database-$data_prefix.$today.sql`;
   $gzip = `gzip -f /app/backups/$database-$data_prefix.$today.sql`;
   $db_size_query = "mysql -uroot --password='" . $rootpass . "' -h" . $host . " information_schema -e 'SELECT ROUND(SUM(data_length + index_length) / 1024 / 1024, 1) as data_size FROM information_schema.tables WHERE table_schema=\"$database\"' -N -s";
@@ -79,7 +81,7 @@ if (!file_exists("/app/backups/$database-$data_prefix.$today.sql.gz")) {
 
 send_message('Pack up the files directory');
 // Then get a copy of the files directory if the gzip does not already exist.
-if (!file_exists("/app/backups/$files_prefix.$today.tar.gz")) {
+if (!file_exists("/app/backups/$files_prefix.$today.tar.gz" && empty($skip_files))) {
   $files = `cd $files_folder_parent; tar -czf /app/backups/$files_prefix.$today.tar.gz $files_folder_name`;
 }
 
@@ -100,9 +102,8 @@ $html .= 'Data Prefix: ' . getenv('DATA_PREFIX') . ' / Files Prefix: ' . getenv(
 $html .= 'Database Size of ' . $database . ' dump: ' . $db_size . ' Megabytes.<hr />';
 
 send_message('Do Our Deletions');
-/**
- * Step One: Delete any files older than 14 days.
- */
+
+/** Step One: Delete any files older than the interval number of days (TTL) days. */
 $html .= '<b>Deletions:</b><hr />';
 foreach ($paths as $bucket => $info) {
   try {
@@ -135,9 +136,8 @@ foreach ($paths as $bucket => $info) {
 }
 
 send_message("Do our upload");
-/**
- * Step Two: Upload any new files transferred in via rsync
- */
+
+/** Step Two: Upload any new files. */
 $html .= "<b>Additions:</b><hr />";
 foreach ($paths as $bucket => $info) {
   chdir($info['path']);
@@ -153,13 +153,13 @@ foreach ($paths as $bucket => $info) {
 
         // Using stream instead of file path
         $source = fopen($info['path'] .'/' . $filename, 'rb');
-
         $uploader = new ObjectUploader(
           $s3,
           $bucket,
           $filename,
           $source
         );
+
         do {
           try {
             $result = $uploader->upload();
@@ -187,10 +187,12 @@ $html .= '</td></tr></table></body></html>';
 send_html_email($html);
 
 /**
- * send_html_email($html)
  * Send the email contained in the argument to the recipients specified in the
  * environment variables. See the README for more information on the environment
  * variables being used.
+ * 
+ * @param string $html
+ *  The HTML of the email we wish to send
  */
 function send_html_email($html) {
 
@@ -243,8 +245,18 @@ function send_html_email($html) {
   }
 }
 
+/**
+ * Create a debug log if we are in debug mode.
+ * 
+ * @param string $text
+ *  The text to be appended to the end of the log file.
+ */
 function send_message($text) {
-  //$fh = fopen('/app/backups/message.txt', 'a');
-  //fwrite($fh, $text . "\n");
-  //fclose($fh);
+  $debug = getenv('DEBUG');
+  if (!empty($debug)) {
+    $fh = fopen('/app/backups/message.txt', 'a');
+    fwrite($fh, $text . "\n");
+    fclose($fh);
+  }
+
 }
