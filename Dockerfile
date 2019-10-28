@@ -5,10 +5,10 @@ LABEL name="ITCON Backup Container"
 LABEL description="A backup system based in Docker designed for Drupal backups to AWS/MinIO"
 LABEL author="Michael R. Bagnall <mbagnall@itcon-inc.com>"
 LABEL vendor="ITCON Services, LLC."
-LABEL version="0.18"
+LABEL version="0.19"
 
 # Version string
-ENV VERSION_NUMBER v0.18
+ENV VERSION_NUMBER v0.19
 
 RUN apt update
 RUN apt-get -y install mysql-common
