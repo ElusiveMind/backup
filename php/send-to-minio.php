@@ -72,18 +72,22 @@ if (!is_dir('/app/backups')) {
 
 send_message('Extract and encrypt the MySQL Database');
 // Get a current snapshot of the MySQL database provided a gzipped copy does not exist.
-if (!file_exists("/app/backups/$database-$data_prefix.$today.sql.gz" && empty($skip_database))) {
-  $mysql_query = "mysqldump -uroot --password='" . $rootpass . "' -h" . $host . " " . $database . "> /app/backups/" . $database . "-" . $data_prefix . "." . $today . ".sql";
-  $mysql_backup = exec($mysql_query);
-  $gzip = `gzip -f /app/backups/$database-$data_prefix.$today.sql`;
-  $db_size_query = "mysql -uroot --password='" . $rootpass . "' -h" . $host . " information_schema -e 'SELECT ROUND(SUM(data_length + index_length) / 1024 / 1024, 1) as data_size FROM information_schema.tables WHERE table_schema=\"$database\"' -N -s";
-  $db_size = exec($db_size_query);
+if (empty($skip_database)) {
+  if (!file_exists("/app/backups/$database-$data_prefix.$today.sql.gz")) {
+    $mysql_query = "mysqldump -uroot --password='" . $rootpass . "' -h" . $host . " " . $database . "> /app/backups/" . $database . "-" . $data_prefix . "." . $today . ".sql";
+    $mysql_backup = exec($mysql_query);
+    $gzip = `gzip -f /app/backups/$database-$data_prefix.$today.sql`;
+    $db_size_query = "mysql -uroot --password='" . $rootpass . "' -h" . $host . " information_schema -e 'SELECT ROUND(SUM(data_length + index_length) / 1024 / 1024, 1) as data_size FROM information_schema.tables WHERE table_schema=\"$database\"' -N -s";
+    $db_size = exec($db_size_query);
+  }
 }
 
 send_message('Pack up the files directory');
 // Then get a copy of the files directory if the gzip does not already exist.
-if (!file_exists("/app/backups/$files_prefix.$today.tar.gz" && empty($skip_files))) {
-  $files = `cd $files_folder_parent; tar -czf /app/backups/$files_prefix.$today.tar.gz $files_folder_name`;
+if (empty($skip_files)) {
+  if (file_exists("/app/backups/$files_prefix.$today.tar.gz")) {
+    $files = `cd $files_folder_parent; tar -czf /app/backups/$files_prefix.$today.tar.gz $files_folder_name`;
+  }
 }
 
 $paths = [
