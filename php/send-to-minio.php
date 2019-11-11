@@ -49,6 +49,13 @@ $s3 = new S3Client([
   ],
 ]);
 
+$paths = [
+  $minio_bucket => [
+    'path' => '/app/backups',
+    'glob' => '*.gz',
+  ],
+];
+
 send_message('More environmental definitions');
 $user = getenv('MYSQL_USER');
 $pass = getenv('MYSQL_PASS');
@@ -103,12 +110,12 @@ $html .= 'Database Size of ' . $database . ' dump: ' . $db_size . ' Megabytes.<h
 /** Some hosts need to delete files first for space concerns. Allow */
 /** this to be configurable. */
 if (!empty($delete_first)) {
-  delete_backups($html);
-  upload_files($html);
+  delete_backups($html, $s3, $paths);
+  upload_files($html, $s3, $paths);
 }
 else {
-  upload_files($html);
-  delete_files($html);
+  upload_files($html, $s3, $path);
+  delete_files($html, $s3, $path);
 }
 
 // Close out our HTML.
@@ -118,16 +125,8 @@ send_html_email($html);
 
 /************************************************************************/
 
-function delete_files(&$html) {
+function delete_files(&$html, $s3, $paths) {
   send_message('Do Our Deletions');
-
-  $paths = [
-    $minio_bucket => [
-      'path' => '/app/backups',
-      'glob' => '*.gz',
-    ],
-  ];
-
   /** Step One: Delete any files older than the interval number of days (TTL) days. */
   $html .= '<b>Deletions:</b><hr />';
   foreach ($paths as $bucket => $info) {
@@ -161,16 +160,8 @@ function delete_files(&$html) {
   }
 }
 
-function upload_files(&$htm) {
+function upload_files(&$html, $s3, $paths) {
   send_message("Do our upload");
-
-  $paths = [
-    $minio_bucket => [
-      'path' => '/app/backups',
-      'glob' => '*.gz',
-    ],
-  ];
-
   /** Step Two: Upload any new files. */
   $html .= "<b>Additions:</b><hr />";
   foreach ($paths as $bucket => $info) {
