@@ -125,7 +125,7 @@ send_html_email($html);
 
 /************************************************************************/
 
-function delete_backups(&$html) {
+function delete_files(&$html) {
   send_message('Do Our Deletions');
   /** Step One: Delete any files older than the interval number of days (TTL) days. */
   $html .= '<b>Deletions:</b><hr />';

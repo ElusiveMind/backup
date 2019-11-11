@@ -28,6 +28,9 @@ Here are the configuration environmental variables for all of the settings that 
 **DEBUG**  
 Enable debug logging. Logging is logged to `messages.txt` in `/app/backups`  
 
+**DELETE_FIRST**  
+Delete the old files on the remote server first before uploading new files. For hosts with limited space.  
+
 **INTERVAL**  
 This is the interval at which to run the cron scripts. Must be in cron format (ex. 0 0 * * *)  
 
