@@ -91,13 +91,6 @@ if (empty($skip_files)) {
   }
 }
 
-$paths = [
-  $minio_bucket => [
-    'path' => '/app/backups',
-    'glob' => '*.gz',
-  ],
-];
-
 // Begin our HTML output.
 $html = '<html><head><title>' . $site_identifier . '</title>';
 $html .= '<style>body { color: #FFFFFF: background-color: #000000; font-family: Tahoma, Arial; font-size: 14pt; }</style>';
@@ -127,6 +120,14 @@ send_html_email($html);
 
 function delete_files(&$html) {
   send_message('Do Our Deletions');
+
+  $paths = [
+    $minio_bucket => [
+      'path' => '/app/backups',
+      'glob' => '*.gz',
+    ],
+  ];
+
   /** Step One: Delete any files older than the interval number of days (TTL) days. */
   $html .= '<b>Deletions:</b><hr />';
   foreach ($paths as $bucket => $info) {
@@ -162,6 +163,14 @@ function delete_files(&$html) {
 
 function upload_files(&$htm) {
   send_message("Do our upload");
+
+  $paths = [
+    $minio_bucket => [
+      'path' => '/app/backups',
+      'glob' => '*.gz',
+    ],
+  ];
+
   /** Step Two: Upload any new files. */
   $html .= "<b>Additions:</b><hr />";
   foreach ($paths as $bucket => $info) {
