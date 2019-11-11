@@ -85,7 +85,7 @@ if (empty($skip_database)) {
 send_message('Pack up the files directory');
 // Then get a copy of the files directory if the gzip does not already exist.
 if (empty($skip_files)) {
-  if (file_exists("/app/backups/$files_prefix.$today.tar.gz")) {
+  if (!file_exists("/app/backups/$files_prefix.$today.tar.gz")) {
     $files = `cd $files_folder_parent; tar -czf /app/backups/$files_prefix.$today.tar.gz $files_folder_name`;
   }
 }
