@@ -114,8 +114,8 @@ if (!empty($delete_first)) {
   upload_files($html, $s3, $paths);
 }
 else {
-  upload_files($html, $s3, $path);
-  delete_files($html, $s3, $path);
+  upload_files($html, $s3, $paths);
+  delete_files($html, $s3, $paths);
 }
 
 // Close out our HTML.
