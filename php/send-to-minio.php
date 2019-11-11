@@ -202,6 +202,7 @@ function upload_files(&$html, $s3, $paths) {
         }
         unlink($info['path'] .'/' . $filename);
       }
+      $html .= '</ul>';
     }
   }
 }
