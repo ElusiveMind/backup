@@ -62,6 +62,7 @@ $files_folder_name = getenv('FILES_FOLDER_NAME');
 $minio_bucket = getenv('MINIO_BUCKET');
 $skip_files = getenv('SKIP_FILES');
 $skip_database = getenv('SKIP_DATABASE');
+$delete_first = getenv('DELETE_FIRST');
 
 // The first thing we have to do is get the mysqldump.
 $today = date('Y-m-d');
@@ -106,90 +107,104 @@ $html .= 'Backup Container ' . getenv('VERSION_NUMBER') . ' - Michael R. Bagnall
 $html .= 'Data Prefix: ' . getenv('DATA_PREFIX') . ' / Files Prefix: ' . getenv('FILES_PREFIX'). '<br />';
 $html .= 'Database Size of ' . $database . ' dump: ' . $db_size . ' Megabytes.<hr />';
 
-send_message('Do Our Deletions');
-
-/** Step One: Delete any files older than the interval number of days (TTL) days. */
-$html .= '<b>Deletions:</b><hr />';
-foreach ($paths as $bucket => $info) {
-  try {
-    $result = $s3->ListObjects([
-      'Bucket' => $bucket,
-      'EncodingType' => 'url',
-    ]);
-  } catch (S3Exception $e) {
-    echo $e->getMessage();
-  }
-  if (!empty($result['Contents'])) {
-    $html .= '<ul>';
-    foreach ($result['Contents'] as $key => $content) {
-      $last_modified = strtotime($content['LastModified']->__toString());
-      // Entries expire and are deleted after 14 days.
-      $expires = time() - (60*60*24) * getenv('MINIO_FILE_TTL');
-      if ($last_modified < $expires) {
-        $delete = $s3->DeleteObject([
-          'Bucket' => $bucket,
-          'Key' => $content['Key'],
-        ]);
-        $html .= "<li><i>Deleted Key:</i> $bucket/" . $content['Key'] . '</li>';
-      }
-    }
-    $html .= '</ul>';
-  }
-  else {
-    $html .= '<b>There are no files queued for deletion.</b><br /><br />';
-  }
+/** Some hosts need to delete files first for space concerns. Allow */
+/** this to be configurable. */
+if (!empty($delete_first)) {
+  delete_backups($html);
+  upload_files($html);
 }
-
-send_message("Do our upload");
-
-/** Step Two: Upload any new files. */
-$html .= "<b>Additions:</b><hr />";
-foreach ($paths as $bucket => $info) {
-  chdir($info['path']);
-  $filenames = glob($info['glob']);
-  if (!empty($filenames)) {
-    $html .= '<ul>';
-    foreach (glob($info['glob']) as $filename) {
-      $html .= '<li><b>' . $info['path'] . ':</b> ';
-      $response = $s3->doesObjectExist($bucket, $filename);
-      if ($response != '1') {
-        send_message("<i>Adding:</i> $bucket/$filename</li>");
-        $html .= "<i>Adding:</i> $bucket/$filename</li>";
-
-        // Using stream instead of file path
-        $source = fopen($info['path'] .'/' . $filename, 'rb');
-        $uploader = new ObjectUploader(
-          $s3,
-          $bucket,
-          $filename,
-          $source
-        );
-
-        do {
-          try {
-            $result = $uploader->upload();
-          } catch (MultipartUploadException $e) {
-            rewind($source);
-            $uploader = new MultipartUploader($s3, $source, [
-              'state' => $e->getState(),
-            ]);
-          }
-        } while (!isset($result));
-      }
-      else {
-        $html .= $bucket . '/' . $filename . ' <i>Already Exists</i></li>';
-        send_message($bucket . '/' . $filename . ' <i>Already Exists</i></li>');
-      }
-      unlink($info['path'] .'/' . $filename);
-    }
-  }
+else {
+  upload_files($html);
+  delete_files($html);
 }
 
 // Close out our HTML.
 $html .= '</td></tr></table></body></html>';
 
-// Send the email.
 send_html_email($html);
+
+/************************************************************************/
+
+function delete_backups(&$html) {
+  send_message('Do Our Deletions');
+  /** Step One: Delete any files older than the interval number of days (TTL) days. */
+  $html .= '<b>Deletions:</b><hr />';
+  foreach ($paths as $bucket => $info) {
+    try {
+      $result = $s3->ListObjects([
+        'Bucket' => $bucket,
+        'EncodingType' => 'url',
+      ]);
+    } catch (S3Exception $e) {
+      echo $e->getMessage();
+    }
+    if (!empty($result['Contents'])) {
+      $html .= '<ul>';
+      foreach ($result['Contents'] as $key => $content) {
+        $last_modified = strtotime($content['LastModified']->__toString());
+        // Entries expire and are deleted after 14 days.
+        $expires = time() - (60*60*24) * getenv('MINIO_FILE_TTL');
+        if ($last_modified < $expires) {
+          $delete = $s3->DeleteObject([
+            'Bucket' => $bucket,
+            'Key' => $content['Key'],
+          ]);
+          $html .= "<li><i>Deleted Key:</i> $bucket/" . $content['Key'] . '</li>';
+        }
+      }
+      $html .= '</ul>';
+    }
+    else {
+      $html .= '<b>There are no files queued for deletion.</b><br /><br />';
+    }
+  }
+}
+
+function upload_files(&$htm) {
+  send_message("Do our upload");
+  /** Step Two: Upload any new files. */
+  $html .= "<b>Additions:</b><hr />";
+  foreach ($paths as $bucket => $info) {
+    chdir($info['path']);
+    $filenames = glob($info['glob']);
+    if (!empty($filenames)) {
+      $html .= '<ul>';
+      foreach (glob($info['glob']) as $filename) {
+        $html .= '<li><b>' . $info['path'] . ':</b> ';
+        $response = $s3->doesObjectExist($bucket, $filename);
+        if ($response != '1') {
+          send_message("<i>Adding:</i> $bucket/$filename</li>");
+          $html .= "<i>Adding:</i> $bucket/$filename</li>";
+
+          // Using stream instead of file path
+          $source = fopen($info['path'] .'/' . $filename, 'rb');
+          $uploader = new ObjectUploader(
+            $s3,
+            $bucket,
+            $filename,
+            $source
+          );
+
+          do {
+            try {
+              $result = $uploader->upload();
+            } catch (MultipartUploadException $e) {
+              rewind($source);
+              $uploader = new MultipartUploader($s3, $source, [
+                'state' => $e->getState(),
+              ]);
+            }
+          } while (!isset($result));
+        }
+        else {
+          $html .= $bucket . '/' . $filename . ' <i>Already Exists</i></li>';
+          send_message($bucket . '/' . $filename . ' <i>Already Exists</i></li>');
+        }
+        unlink($info['path'] .'/' . $filename);
+      }
+    }
+  }
+}
 
 /**
  * Send the email contained in the argument to the recipients specified in the
@@ -199,7 +214,7 @@ send_html_email($html);
  * @param string $html
  *  The HTML of the email we wish to send
  */
-function send_html_email($html) {
+function send_html_email(&$html) {
 
   // If we do not have an SMTP hostname then we really cannot do anything.
   if (empty(getenv('SMTP_HOSTNAME'))) {
