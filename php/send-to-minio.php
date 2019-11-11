@@ -49,13 +49,6 @@ $s3 = new S3Client([
   ],
 ]);
 
-$paths = [
-  $minio_bucket => [
-    'path' => '/app/backups',
-    'glob' => '*.gz',
-  ],
-];
-
 send_message('More environmental definitions');
 $user = getenv('MYSQL_USER');
 $pass = getenv('MYSQL_PASS');
@@ -70,6 +63,13 @@ $minio_bucket = getenv('MINIO_BUCKET');
 $skip_files = getenv('SKIP_FILES');
 $skip_database = getenv('SKIP_DATABASE');
 $delete_first = getenv('DELETE_FIRST');
+
+$paths = [
+  $minio_bucket => [
+    'path' => '/app/backups',
+    'glob' => '*.gz',
+  ],
+];
 
 // The first thing we have to do is get the mysqldump.
 $today = date('Y-m-d');
