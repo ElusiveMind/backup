@@ -110,7 +110,7 @@ $html .= 'Database Size of ' . $database . ' dump: ' . $db_size . ' Megabytes.<h
 /** Some hosts need to delete files first for space concerns. Allow */
 /** this to be configurable. */
 if (!empty($delete_first)) {
-  delete_backups($html, $s3, $paths);
+  delete_files($html, $s3, $paths);
   upload_files($html, $s3, $paths);
 }
 else {

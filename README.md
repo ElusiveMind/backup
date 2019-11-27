@@ -77,7 +77,7 @@ Boolean. Sets whether the SMTP server requires authentication or not.
 A string describing the site being backed up.  
 
 **SKIP_DATABASE**  
-A boolean that tells the backup process to skip backing up the database.  
+A boolean that tells the backup process to skip backing up the database. 
 
 **SKIP_FILES**  
 A boolean that tells the backup process to skip the files directory.  
@@ -102,7 +102,6 @@ The address for whom you should send the report to.
 
 **SMTP_PORT**  
 The port to use. Use to set to 25 where needed or 465. Defaults to tls and 587.  
-
 
 ## TODO  
 
