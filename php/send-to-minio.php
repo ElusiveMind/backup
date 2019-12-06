@@ -111,12 +111,12 @@ $html .= 'Database Size of ' . $database . ' dump: ' . $db_size . ' Megabytes.<h
 /** Some hosts need to delete files first for space concerns. Allow */
 /** this to be configurable. */
 if (!empty($delete_first)) {
-  delete_files($html, $s3, $paths);
-  upload_files($html, $s3, $paths);
+  delete_files($html, $s3, $paths, $aws_bucket_subfolder);
+  upload_files($html, $s3, $paths, $aws_bucket_subfolder);
 }
 else {
-  upload_files($html, $s3, $paths);
-  delete_files($html, $s3, $paths);
+  upload_files($html, $s3, $paths, $aws_bucket_subfolder);
+  delete_files($html, $s3, $paths, $aws_bucket_subfolder);
 }
 
 // Close out our HTML.
@@ -126,7 +126,7 @@ send_html_email($html);
 
 /************************************************************************/
 
-function delete_files(&$html, $s3, $paths) {
+function delete_files(&$html, $s3, $paths, $aws_bucket_subfolder) {
   send_message('Do Our Deletions');
   /** Step One: Delete any files older than the interval number of days (TTL) days. */
   $html .= '<b>Deletions:</b><hr />';
@@ -161,7 +161,7 @@ function delete_files(&$html, $s3, $paths) {
   }
 }
 
-function upload_files(&$html, $s3, $paths) {
+function upload_files(&$html, $s3, $paths, $aws_bucket_subfolder) {
   send_message("Do our upload");
   /** Step Two: Upload any new files. */
   $html .= "<b>Additions:</b><hr />";
