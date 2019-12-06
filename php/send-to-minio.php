@@ -67,7 +67,7 @@ $aws_bucket_subfolder = getenv('AWS_BUCKET_SUBFOLDER');
 
 /** Add the slash to the subfolder if we are configured. */
 if (!empty($aws_bucket_subfolder)) {
-  $aws_bucket_subfolder = '/';
+  $aws_bucket_subfolder .= '/';
 }
 
 $paths = [
