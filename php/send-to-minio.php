@@ -63,6 +63,7 @@ $minio_bucket = getenv('MINIO_BUCKET');
 $skip_files = getenv('SKIP_FILES');
 $skip_database = getenv('SKIP_DATABASE');
 $delete_first = getenv('DELETE_FIRST');
+$aws_bucket_subfolder = getenv('AWS_BUCKET_SUBFOLDER');
 
 $paths = [
   $minio_bucket => [
@@ -181,7 +182,7 @@ function upload_files(&$html, $s3, $paths) {
           $uploader = new ObjectUploader(
             $s3,
             $bucket,
-            $filename,
+            $aws_bucket_subfolder . $filename,
             $source
           );
 
