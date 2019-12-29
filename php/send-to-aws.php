@@ -1,8 +1,8 @@
 <?php
 
 /**
- * send-to-minio.php
- * A script to send backup files to a MinIO/S3 mount.
+ * send-to-aws.php
+ * A script to send backup files to a AWS/S3 mount.
  * This is primarily made for USDA eWAPS in mind.
  * by Michael R. Bagnall <mbagnall@itcon-inc.com> - September 23, 2019
  */
@@ -22,30 +22,30 @@ use PHPMailer\PHPMailer\Exception;
 
 send_message('Define our variables from environment variables.');
 $site_identifier = getenv('SITE_IDENTIFIER');
-$minio_endpoint = getenv('MINIO_ENDPOINT');
+$aws_endpoint = getenv('AWS_ENDPOINT');
 $mysql_host = getenv('MYSQL_HOST');
-$minio_key = getenv('MINIO_KEY');
-$minio_secret = getenv('MINIO_SECRET');
+$aws_key = getenv('AWS_KEY');
+$aws_secret = getenv('AWS_SECRET');
 
 send_message('Pre-systems check');
 $sitename = (!empty($site_identifier)) ? $site_identifier : "Identifier Not Provided.";
 // If we are not properly configured, then we cannot continue.
-if (empty($minio_endpoint) || empty($mysql_host)) {
-  send_message('Unable to run MinIO backup script.');
-  $html = "Unable to run MinIO Backup script on " . $sitename . ". Check your environment variables for this container.";
+if (empty($aws_endpoint) || empty($mysql_host)) {
+  send_message('Unable to run AWS backup script.');
+  $html = "Unable to run AWS Backup script on " . $sitename . ". Check your environment variables for this container.";
   send_html_email($html);
   exit();
 }
 
-send_message('Open our S3 clent to wherever');
+send_message('Open our S3 clent.');
 $s3 = new S3Client([
   'version' => 'latest',
   'region'  => 'us-east-1',
-  'endpoint' => $minio_endpoint,
+  'endpoint' => $aws_endpoint,
   'use_path_style_endpoint' => true,
   'credentials' => [
-    'key'    => $minio_key,
-    'secret' => $minio_secret,
+    'key'    => $aws_key,
+    'secret' => $aws_secret,
   ],
 ]);
 
@@ -59,7 +59,7 @@ $data_prefix = getenv('DATA_PREFIX');
 $files_prefix = getenv('FILES_PREFIX');
 $files_folder_parent = getenv('FILES_FOLDER_PARENT');
 $files_folder_name = getenv('FILES_FOLDER_NAME');
-$minio_bucket = getenv('MINIO_BUCKET');
+$aws_bucket = getenv('AWS_BUCKET');
 $skip_files = getenv('SKIP_FILES');
 $skip_database = getenv('SKIP_DATABASE');
 $delete_first = getenv('DELETE_FIRST');
@@ -71,7 +71,7 @@ if (!empty($aws_bucket_subfolder)) {
 }
 
 $paths = [
-  $minio_bucket => [
+  $aws_bucket => [
     'path' => '/app/backups',
     'glob' => '*.gz',
   ],
@@ -149,7 +149,7 @@ function delete_files(&$html, $s3, $paths, $aws_bucket_subfolder) {
       foreach ($result['Contents'] as $key => $content) {
         $last_modified = strtotime($content['LastModified']->__toString());
         // Entries expire and are deleted after 14 days.
-        $expires = time() - (60*60*24) * getenv('MINIO_FILE_TTL');
+        $expires = time() - (60*60*24) * getenv('AWS_FILE_TTL');
         if ($last_modified < $expires) {
           $delete = $s3->DeleteObject([
             'Bucket' => $bucket,

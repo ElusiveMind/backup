@@ -1,0 +1,1 @@
+$INTERVAL /usr/local/bin/php /php/send-to-aws.php
