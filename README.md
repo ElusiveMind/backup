@@ -4,7 +4,7 @@ The DPBC (Docker Project Backup Container) is a stand-alone container designed t
 
 The default interval is once per day.
 
-To configure the container, environment variables must be set up. Because we are offloading our items into a MinIO instance, we need to configure our MinIO criteria, our MySQL connection criteria and the location of our Drupal files. These can all be done with the environment variables listed below.
+To configure the container, environment variables must be set up. Because we are offloading our items into an AWS instance, we need to configure our AWS criteria, our MySQL connection criteria and the location of our Drupal files. These can all be done with the environment variables listed below.
 
 Keep in mind that if you are going to use this information inside of a docker-compose.yml file - be ABSOLUTELY SURE that this file is not committed to your git repo or you are asking to have a bad day.... possibly more than one.
 
@@ -34,16 +34,19 @@ Delete the old files on the remote server first before uploading new files. For 
 **INTERVAL**  
 This is the interval at which to run the cron scripts. Must be in cron format (ex. 0 0 * * *)  
 
-**MINIO_ENDPOINT**  
-This is the full canonical URL (http or https) to the MinIO server that the backups will be sent to.  
+**AWS_BUCKET_SUBFOLDER**  
+The sub-folder inside the bucket for which backups will be stored. Useful if you are using one bucket for multiple projects and wish to keep them separated into different folders.  
 
-**MINIO_KEY**  
-This is the secret key used to authenticate with MinIO. KEEP THIS OUT OF YOUR GIT REPOSITORY. You have been warned. Don't make the same mistakes I have :)  
+**AWS_ENDPOINT**  
+This is the full canonical URL (http or https) to the AWS URL that the backups will be sent to.  
 
-**MINIO_SECRET**  
-This is the secret phrase used to authenticate with MinIO. Again, KEEP THIS OUT OF YOUR GIT REPOSITORY. You have been warned. Don't make the same mistakes I have :)  
+**AWS_KEY**  
+This is the secret key used to authenticate with AWS. KEEP THIS OUT OF YOUR GIT REPOSITORY. You have been warned. Don't make the same mistakes I have :)  
 
-**MINIO_FILE_TTL**  
+**AWS_SECRET**  
+This is the secret phrase used to authenticate with AWS. Again, KEEP THIS OUT OF YOUR GIT REPOSITORY. You have been warned. Don't make the same mistakes I have :)  
+
+**AWS_FILE_TTL**  
 This is the number of days to keep of backups. Each backup will be kept for this interval. Once reached, the file will be removed on the next synchronization.  
 
 **MYSQL_HOST**  
@@ -102,8 +105,3 @@ The address for whom you should send the report to.
 
 **SMTP_PORT**  
 The port to use. Use to set to 25 where needed or 465. Defaults to tls and 587.  
-
-## TODO  
-
-1. The ability to handle RSYNC of data as well as transfer to AWS/MinIO
-2. Re-labeling variables to AWS instead of MinIO

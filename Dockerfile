@@ -16,7 +16,7 @@ RUN apt-get -y install default-mysql-client
 RUN apt-get -y install cron
 RUN apt-get -y install gettext procps nano
 
-COPY cron/minio /etc/cron.d/aws
+COPY cron/aws /etc/cron.d/aws
 RUN chmod 0644 /etc/cron.d/aws
 
 ADD php /php
