@@ -26,30 +26,6 @@ $aws_endpoint = getenv('AWS_ENDPOINT');
 $mysql_host = getenv('MYSQL_HOST');
 $aws_key = getenv('AWS_KEY');
 $aws_secret = getenv('AWS_SECRET');
-
-send_message('Pre-systems check');
-$sitename = (!empty($site_identifier)) ? $site_identifier : "Identifier Not Provided.";
-// If we are not properly configured, then we cannot continue.
-if (empty($aws_endpoint) || empty($mysql_host)) {
-  send_message('Unable to run AWS backup script.');
-  $html = "Unable to run AWS Backup script on " . $sitename . ". Check your environment variables for this container.";
-  send_html_email($html);
-  exit();
-}
-
-send_message('Open our S3 clent.');
-$s3 = new S3Client([
-  'version' => 'latest',
-  'region'  => 'us-east-1',
-  'endpoint' => $aws_endpoint,
-  'use_path_style_endpoint' => true,
-  'credentials' => [
-    'key'    => $aws_key,
-    'secret' => $aws_secret,
-  ],
-]);
-
-send_message('More environmental definitions');
 $user = getenv('MYSQL_USER');
 $pass = getenv('MYSQL_PASS');
 $rootpass = getenv('MYSQL_ROOTPASS');
@@ -65,6 +41,16 @@ $skip_database = getenv('SKIP_DATABASE');
 $delete_first = getenv('DELETE_FIRST');
 $aws_bucket_subfolder = getenv('AWS_BUCKET_SUBFOLDER');
 
+send_message('Pre-systems check');
+$sitename = (!empty($site_identifier)) ? $site_identifier : "Identifier Not Provided.";
+// If we are not properly configured, then we cannot continue.
+if (empty($aws_endpoint) || empty($mysql_host)) {
+  send_message('Unable to run AWS backup script.');
+  $html = "Unable to run AWS Backup script on " . $sitename . ". Check your environment variables for this container.";
+  send_html_email($html);
+  exit();
+}
+
 /** Add the slash to the subfolder if we are configured. */
 if (!empty($aws_bucket_subfolder)) {
   $aws_bucket_subfolder .= '/';
@@ -77,7 +63,6 @@ $paths = [
   ],
 ];
 
-// The first thing we have to do is get the mysqldump.
 $today = date('Y-m-d');
 
 if (!is_dir('/app/backups')) {
@@ -85,7 +70,7 @@ if (!is_dir('/app/backups')) {
 }
 
 send_message('Extract and encrypt the MySQL Database');
-// Get a current snapshot of the MySQL database provided a gzipped copy does not exist.
+/** Get a current snapshot of the MySQL database provided a gzipped copy does not exist. */
 if (empty($skip_database)) {
   if (!file_exists("/app/backups/$database-$data_prefix.$today.sql.gz")) {
     $mysql_query = "mysqldump -uroot --password='" . $rootpass . "' -h" . $host . " " . $database . "> /app/backups/" . $database . "-" . $data_prefix . "." . $today . ".sql";
@@ -97,14 +82,14 @@ if (empty($skip_database)) {
 }
 
 send_message('Pack up the files directory');
-// Then get a copy of the files directory if the gzip does not already exist.
+/** Then get a copy of the files directory if the gzip does not already exist. */
 if (empty($skip_files)) {
   if (!file_exists("/app/backups/$files_prefix.$today.tar.gz")) {
     $files = `cd $files_folder_parent; tar -czf /app/backups/$files_prefix.$today.tar.gz $files_folder_name`;
   }
 }
 
-// Begin our HTML output.
+/** Begin our HTML Email output. */
 $html = '<html><head><title>' . $site_identifier . '</title>';
 $html .= '<style>body { color: #FFFFFF: background-color: #000000; font-family: Tahoma, Arial; font-size: 14pt; }</style>';
 $html .= '</head><body><table border="0" width="960" align="center"><tr><td>';
@@ -112,6 +97,19 @@ $html .= '<b>Backup Report For:</b> ' . $site_identifier . "<br />";
 $html .= 'Backup Container ' . getenv('VERSION_NUMBER') . ' - Michael R. Bagnall - mbagnall@itcon-inc.com<br />';
 $html .= 'Data Prefix: ' . getenv('DATA_PREFIX') . ' / Files Prefix: ' . getenv('FILES_PREFIX'). '<br />';
 $html .= 'Database Size of ' . $database . ' dump: ' . $db_size . ' Megabytes.<hr />';
+
+/** Open up our connection to S3 */
+send_message('Open our S3 clent.');
+$s3 = new S3Client([
+  'version' => 'latest',
+  'region'  => 'us-east-1',
+  'endpoint' => $aws_endpoint,
+  'use_path_style_endpoint' => true,
+  'credentials' => [
+    'key'    => $aws_key,
+    'secret' => $aws_secret,
+  ],
+]);
 
 /** Some hosts need to delete files first for space concerns. Allow */
 /** this to be configurable. */
@@ -148,7 +146,7 @@ function delete_files(&$html, $s3, $paths, $aws_bucket_subfolder) {
       $html .= '<ul>';
       foreach ($result['Contents'] as $key => $content) {
         $last_modified = strtotime($content['LastModified']->__toString());
-        // Entries expire and are deleted after 14 days.
+        // Entries expire and are deleted after the configured days.
         $expires = time() - (60*60*24) * getenv('AWS_FILE_TTL');
         if ($last_modified < $expires) {
           $delete = $s3->DeleteObject([
@@ -181,8 +179,9 @@ function upload_files(&$html, $s3, $paths, $aws_bucket_subfolder) {
         if ($response != '1') {
           send_message("<i>Adding:</i> $bucket/$filename</li>");
           $html .= "<i>Adding:</i> $bucket/$filename</li>";
-
+          $filepath = $info['path'] .'/' . $filename;
           // Using stream instead of file path
+          /*
           $source = fopen($info['path'] .'/' . $filename, 'rb');
           $uploader = new ObjectUploader(
             $s3,
@@ -201,6 +200,57 @@ function upload_files(&$html, $s3, $paths, $aws_bucket_subfolder) {
               ]);
             }
           } while (!isset($result));
+          */
+
+          $result = $s3->createMultipartUpload([
+            'Bucket'       => $bucket,
+            'Key'          => $filename,
+            'StorageClass' => 'REDUCED_REDUNDANCY',
+            'ACL'          => 'public-read',
+          ]);
+          $uploadId = $result['UploadId'];
+
+          // Upload the file in parts.
+          try {
+            $file = fopen($filepath, 'r');
+            $partNumber = 1;
+            while (!feof($file)) {
+              $result = $s3->uploadPart([
+                'Bucket'     => $bucket,
+                'Key'        => $keyname,
+                'UploadId'   => $uploadId,
+                'PartNumber' => $partNumber,
+                'Body'       => fread($file, 500 * 1024 * 1024),
+              ]);
+              $parts['Parts'][$partNumber] = [
+                'PartNumber' => $partNumber,
+                'ETag' => $result['ETag'],
+              ];
+              $partNumber++;
+              echo "Uploading part {$partNumber} of {$filename}." . PHP_EOL;
+            }
+            fclose($file);
+          } catch (S3Exception $e) {
+            $result = $s3->abortMultipartUpload([
+              'Bucket'   => $bucket,
+              'Key'      => $keyname,
+              'UploadId' => $uploadId
+            ]);
+
+            echo "Upload of {$filename} failed." . PHP_EOL;
+          }
+
+          // Complete the multipart upload.
+          $result = $s3->completeMultipartUpload([
+            'Bucket'   => $bucket,
+            'Key'      => $keyname,
+            'UploadId' => $uploadId,
+            'MultipartUpload'    => $parts,
+          ]);
+          $url = $result['Location'];
+          print $url;
+          exit();
+
         }
         else {
           $html .= $bucket . '/' . $filename . ' <i>Already Exists</i></li>';

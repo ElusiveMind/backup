@@ -23,7 +23,7 @@ You would then need to configure your `FILES_FOLDER_PARENT` and `FILES_FOLDER_NA
 
 ## Environment Variables  
 
-Here are the configuration environmental variables for all of the settings that the backup server will need to offload to your MinIO instrance.
+Here are the configuration environmental variables for all of the settings that the backup server will need to offload to your AWS-compatible instrance.
 
 **DEBUG**  
 Enable debug logging. Logging is logged to `messages.txt` in `/app/backups`  
@@ -32,7 +32,10 @@ Enable debug logging. Logging is logged to `messages.txt` in `/app/backups`
 Delete the old files on the remote server first before uploading new files. For hosts with limited space.  
 
 **INTERVAL**  
-This is the interval at which to run the cron scripts. Must be in cron format (ex. 0 0 * * *)  
+This is the interval at which to run the cron scripts. Must be in cron format (ex. `0 0 * * *`)  
+
+**AWS_BUCKET**  
+This is the main bucket on your AWS-compatible instance. If you need to dump into a sub-folder use the `AWS_BUCKET_SUBFOLDER` option also.  
 
 **AWS_BUCKET_SUBFOLDER**  
 The sub-folder inside the bucket for which backups will be stored. Useful if you are using one bucket for multiple projects and wish to keep them separated into different folders.  
