@@ -248,9 +248,6 @@ function upload_files(&$html, $s3, $paths, $aws_bucket_subfolder) {
             'MultipartUpload'    => $parts,
           ]);
           $url = $result['Location'];
-          print $url;
-          exit();
-
         }
         else {
           $html .= $bucket . '/' . $filename . ' <i>Already Exists</i></li>';
