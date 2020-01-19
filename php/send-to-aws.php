@@ -7,6 +7,7 @@
  * by Michael R. Bagnall <mbagnall@itcon-inc.com> - September 23, 2019
  */
 
+ini_set('memory_limit', -1);
 send_message('Today: ' . date('m-d-Y H:i:s'));
 send_message('Include all of the classes we need to autoload');
 require '/php/vendor/autoload.php';
@@ -183,28 +184,6 @@ function upload_files(&$html, $s3, $paths, $aws_bucket_subfolder) {
           send_message("<i>Adding:</i> $bucket/$filename</li>");
           $html .= "<i>Adding:</i> $bucket/$filename</li>";
           $filepath = $info['path'] .'/' . $filename;
-          // Using stream instead of file path
-          /*
-          $source = fopen($info['path'] .'/' . $filename, 'rb');
-          $uploader = new ObjectUploader(
-            $s3,
-            $bucket,
-            $aws_bucket_subfolder . $filename,
-            $source
-          );
-
-          do {
-            try {
-              $result = $uploader->upload();
-            } catch (MultipartUploadException $e) {
-              rewind($source);
-              $uploader = new MultipartUploader($s3, $source, [
-                'state' => $e->getState(),
-              ]);
-            }
-          } while (!isset($result));
-          */
-
           $result = $s3->createMultipartUpload([
             'Bucket'       => $bucket,
             'Key'          => $filename,
@@ -218,12 +197,14 @@ function upload_files(&$html, $s3, $paths, $aws_bucket_subfolder) {
             $file = fopen($filepath, 'r');
             $partNumber = 1;
             while (!feof($file)) {
+              $body = fread($file, 500 * 1024 * 1024);
+              print strlen($body) . "\n";
               $result = $s3->uploadPart([
                 'Bucket'     => $bucket,
-                'Key'        => $keyname,
+                'Key'        => $filename,
                 'UploadId'   => $uploadId,
                 'PartNumber' => $partNumber,
-                'Body'       => fread($file, 500 * 1024 * 1024),
+                'Body'       => $body,
               ]);
               $parts['Parts'][$partNumber] = [
                 'PartNumber' => $partNumber,
@@ -231,12 +212,13 @@ function upload_files(&$html, $s3, $paths, $aws_bucket_subfolder) {
               ];
               $partNumber++;
               echo "Uploading part {$partNumber} of {$filename}." . PHP_EOL;
+              unset($result);
             }
             fclose($file);
           } catch (S3Exception $e) {
             $result = $s3->abortMultipartUpload([
               'Bucket'   => $bucket,
-              'Key'      => $keyname,
+              'Key'      => $filename,
               'UploadId' => $uploadId
             ]);
 
@@ -246,11 +228,12 @@ function upload_files(&$html, $s3, $paths, $aws_bucket_subfolder) {
           // Complete the multipart upload.
           $result = $s3->completeMultipartUpload([
             'Bucket'   => $bucket,
-            'Key'      => $keyname,
+            'Key'      => $filename,
             'UploadId' => $uploadId,
             'MultipartUpload'    => $parts,
           ]);
           $url = $result['Location'];
+          unset($result);
         }
         else {
           $html .= $bucket . '/' . $filename . ' <i>Already Exists</i></li>';
