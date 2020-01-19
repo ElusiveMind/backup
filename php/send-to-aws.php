@@ -198,7 +198,6 @@ function upload_files(&$html, $s3, $paths, $aws_bucket_subfolder) {
             $partNumber = 1;
             while (!feof($file)) {
               $body = fread($file, 500 * 1024 * 1024);
-              print strlen($body) . "\n";
               $result = $s3->uploadPart([
                 'Bucket'     => $bucket,
                 'Key'        => $filename,
