@@ -109,6 +109,9 @@ $s3 = new S3Client([
     'key'    => $aws_key,
     'secret' => $aws_secret,
   ],
+  'http' => [
+    'verify' => FALSE,
+  ],
 ]);
 
 /** Some hosts need to delete files first for space concerns. Allow */
