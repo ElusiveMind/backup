@@ -110,7 +110,7 @@ $s3 = new S3Client([
     'secret' => $aws_secret,
   ],
   'http' => [
-    'verify' => '/php/crt/ca-bundle.pem',
+    'verify' => FALSE,
   ],
 ]);
 
