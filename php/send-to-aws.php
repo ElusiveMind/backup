@@ -4,6 +4,7 @@
  * send-to-aws.php
  * A script to send backup files to a AWS/S3 mount.
  * This is primarily made for USDA eWAPS in mind.
+ * Added functionality to keep local files within the TTL.
  * by Michael R. Bagnall <mbagnall@itcon-inc.com> - September 23, 2019
  */
 
@@ -40,6 +41,7 @@ $skip_files = getenv('SKIP_FILES');
 $skip_database = getenv('SKIP_DATABASE');
 $delete_first = getenv('DELETE_FIRST');
 $aws_bucket_subfolder = getenv('AWS_BUCKET_SUBFOLDER');
+$keep_local = getenv('KEEP_LOCAL');
 
 send_message('Pre-systems check');
 $sitename = (!empty($site_identifier)) ? $site_identifier : "Identifier Not Provided.";
@@ -98,31 +100,42 @@ $html .= 'Backup Container ' . getenv('VERSION_NUMBER') . ' - Michael R. Bagnall
 $html .= 'Data Prefix: ' . getenv('DATA_PREFIX') . ' / Files Prefix: ' . getenv('FILES_PREFIX'). '<br />';
 $html .= 'Database Size of ' . $database . ' dump: ' . $db_size . ' Megabytes.<hr />';
 
-/** Open up our connection to S3 */
-send_message('Open our S3 clent.');
-$s3 = new S3Client([
-  'version' => 'latest',
-  'region'  => 'us-east-1',
-  'endpoint' => $aws_endpoint,
-  'use_path_style_endpoint' => true,
-  'credentials' => [
-    'key'    => $aws_key,
-    'secret' => $aws_secret,
-  ],
-  'http' => [
-    'verify' => FALSE,
-  ],
-]);
-
-/** Some hosts need to delete files first for space concerns. Allow */
-/** this to be configurable. */
-if (!empty($delete_first)) {
-  delete_files($html, $s3, $paths, $aws_bucket_subfolder);
-  upload_files($html, $s3, $paths, $aws_bucket_subfolder);
+/* 
+ * If we're only doing localfiles and not sending remotely, then clean up
+ * old files that are past our TTL
+ */
+if (!empty($keep_local)) {
+  delete_local_files($paths, $html);
 }
-else {
-  upload_files($html, $s3, $paths, $aws_bucket_subfolder);
-  delete_files($html, $s3, $paths, $aws_bucket_subfolder);
+
+if (!empty($aws_key) && !empty($aws_secret)) {
+  /** Open up our connection to S3 */
+  send_message('Open our S3 clent.');
+  $s3 = new S3Client([
+    'version' => 'latest',
+    'region'  => 'us-east-1',
+    'endpoint' => $aws_endpoint,
+    'use_path_style_endpoint' => true,
+    'credentials' => [
+      'key'    => $aws_key,
+      'secret' => $aws_secret,
+    ],
+    'http' => [
+      'verify' => FALSE,
+    ],
+  ]);
+
+  /** Some hosts need to delete files first for space concerns. Allow */
+  /** this to be configurable. */
+  if (!empty($delete_first)) {
+    delete_files($html, $s3, $paths, $aws_bucket_subfolder);
+    upload_files($html, $s3, $paths, $aws_bucket_subfolder, $keep_local);
+  }
+  else {
+    delete_local_files($paths);
+    upload_files($html, $s3, $paths, $aws_bucket_subfolder);
+    delete_files($html, $s3, $paths, $aws_bucket_subfolder, $keep_local);
+  }
 }
 
 // Close out our HTML.
@@ -135,7 +148,7 @@ send_html_email($html);
 function delete_files(&$html, $s3, $paths, $aws_bucket_subfolder) {
   send_message('Do Our Deletions');
   /** Step One: Delete any files older than the interval number of days (TTL) days. */
-  $html .= '<b>Deletions:</b><hr />';
+  $html .= '<b>Remote File Deletions:</b><hr />';
   foreach ($paths as $bucket => $info) {
     try {
       $result = $s3->ListObjects([
@@ -150,8 +163,8 @@ function delete_files(&$html, $s3, $paths, $aws_bucket_subfolder) {
       foreach ($result['Contents'] as $key => $content) {
         $last_modified = strtotime($content['LastModified']->__toString());
         // Entries expire and are deleted after the configured days.
-        $expires = time() - (60*60*24) * getenv('AWS_FILE_TTL');
-        if ($last_modified < $expires) {
+          $expires = time() - (60*60*24) * getenv('AWS_FILE_TTL');
+          if ($last_modified < $expires) {
           $delete = $s3->DeleteObject([
             'Bucket' => $bucket,
             'Key' => $content['Key'],
@@ -167,7 +180,7 @@ function delete_files(&$html, $s3, $paths, $aws_bucket_subfolder) {
   }
 }
 
-function upload_files(&$html, $s3, $paths, $aws_bucket_subfolder) {
+function upload_files(&$html, $s3, $paths, $aws_bucket_subfolder, $keep_local) {
   send_message("Do our upload");
   /** Step Two: Upload any new files. */
   $html .= "<b>Additions:</b><hr />";
@@ -209,7 +222,9 @@ function upload_files(&$html, $s3, $paths, $aws_bucket_subfolder) {
           $html .= $bucket . '/' . $filename . ' <i>Already Exists</i></li>';
           send_message($bucket . '/' . $filename . ' <i>Already Exists</i></li>');
         }
-        unlink($info['path'] .'/' . $filename);
+        if (empty($keep_local)) {
+          unlink($info['path'] .'/' . $filename);
+        }
       }
       $html .= '</ul>';
     }
@@ -288,5 +303,21 @@ function send_message($text) {
     fwrite($fh, $text . "\n");
     fclose($fh);
   }
+}
 
+function delete_local_files($paths, $html) {
+  $html .= '<b>Local Backup Deletions:</b><hr />';
+  foreach ($paths as $bucket => $info) {
+    chdir($info['path']);
+    $filenames = glob($info['glob']);
+    if (!empty($filenames)) {
+      foreach ($filenames as $filename) {
+        $filetime = filemtime($filename);
+        $expires = time() - (60*60*24) * getenv('AWS_FILE_TTL');
+        if ($last_modified < $expires) {
+          unlink($filename);
+        }
+      }
+    }
+  }
 }
