@@ -45,13 +45,6 @@ $keep_local = getenv('KEEP_LOCAL');
 
 send_message('Pre-systems check');
 $sitename = (!empty($site_identifier)) ? $site_identifier : "Identifier Not Provided.";
-// If we are not properly configured, then we cannot continue.
-if (empty($aws_endpoint) || empty($mysql_host)) {
-  send_message('Unable to run AWS backup script.');
-  $html = "Unable to run AWS Backup script on " . $sitename . ". Check your environment variables for this container.";
-  send_html_email($html);
-  exit();
-}
 
 /** Add the slash to the subfolder if we are configured. */
 if (!empty($aws_bucket_subfolder)) {
@@ -132,7 +125,6 @@ if (!empty($aws_key) && !empty($aws_secret)) {
     upload_files($html, $s3, $paths, $aws_bucket_subfolder, $keep_local);
   }
   else {
-    delete_local_files($paths);
     upload_files($html, $s3, $paths, $aws_bucket_subfolder);
     delete_files($html, $s3, $paths, $aws_bucket_subfolder, $keep_local);
   }
@@ -314,7 +306,7 @@ function delete_local_files($paths, $html) {
       foreach ($filenames as $filename) {
         $filetime = filemtime($filename);
         $expires = time() - (60*60*24) * getenv('AWS_FILE_TTL');
-        if ($last_modified < $expires) {
+        if ($filetime < $expires) {
           unlink($filename);
         }
       }
