@@ -248,10 +248,10 @@ function upload_files(&$html, $s3, $paths, $aws_bucket_subfolder = NULL, $keep_l
             $html .= $bucket . '/' . $filename . ' <i>Already Exists</i></li>';
             send_message($bucket . '/' . $filename . ' <i>Already Exists</i></li>');
           }
-          if ($key[SQL_FOLDER] == 1 && !empty($keep_local_sql)) {
+          if ($key[SQL_FOLDER] == 1 && empty($keep_local_sql)) {
             unlink($info['path'] .'/' . $filename);
           }
-          if ($key[FILES_FOLDER] == 1 && !empty($keep_local_files)) {
+          if ($key[FILES_FOLDER] == 1 && empty($keep_local_files)) {
             unlink($info['path'] .'/' . $filename);
           }
         }
