@@ -248,10 +248,10 @@ function upload_files(&$html, $s3, $paths, $aws_bucket_subfolder = NULL, $keep_l
             $html .= $bucket . '/' . $filename . ' <i>Already Exists</i></li>';
             send_message($bucket . '/' . $filename . ' <i>Already Exists</i></li>');
           }
-          if ($key[SQL_FOLDER] == 1 && empty($keep_local_sql)) {
+          if ($key == SQL_FOLDER && empty($keep_local_sql)) {
             unlink($info['path'] .'/' . $filename);
           }
-          if ($key[FILES_FOLDER] == 1 && empty($keep_local_files)) {
+          if ($key == FILES_FOLDER && empty($keep_local_files)) {
             unlink($info['path'] .'/' . $filename);
           }
         }
@@ -337,8 +337,8 @@ function send_message($text) {
 
 function delete_local_files($paths, $html) {
   $html .= '<b>Local Backup Deletions:</b><hr />';
-  foreach ($paths as $buckets) {
-    foreach ($buckets as $bucket => $info) {
+  foreach ($paths as $bucket => $buckets) {
+    foreach ($buckets as $key => $info) {
       chdir($info['path']);
       $filenames = glob($info['glob']);
       if (!empty($filenames)) {
