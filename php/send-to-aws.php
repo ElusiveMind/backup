@@ -132,14 +132,14 @@ if (!empty($aws_key) && !empty($aws_secret)) {
   }
 }
 
-// Close out our HTML.
-$html .= '</td></tr></table></body></html>';
-
 /* 
  * If we're only doing localfiles and not sending remotely, then clean up
  * old files that are past our TTL
  */
 delete_local_files($paths, $html);
+
+// Close out our HTML.
+$html .= '</td></tr></table></body></html>';
 
 send_html_email($html);
 
