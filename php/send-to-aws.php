@@ -209,15 +209,15 @@ function upload_files(&$html, $s3, $paths, $aws_bucket_subfolder = NULL, $keep_l
   send_message("Do our upload");
   /** Step Two: Upload any new files. */
   $html .= "<b>Additions:</b><hr />";
-  foreach ($paths as $key => $buckets) {
-    foreach ($buckets as $bucket => $info) {
+  foreach ($paths as $bucket => $buckets) {
+    foreach ($buckets as $key => $info) {
       chdir($info['path']);
       $filenames = glob($info['glob']);
       if (!empty($filenames)) {
         $html .= '<ul>';
         foreach (glob($info['glob']) as $filename) {
           $html .= '<li><b>' . $info['path'] . ':</b> ';
-          $response = $s3->doesObjectExist($bucket, $filename);
+          $response = $s3->doesObjectExist($bucket, $aws_bucket_subfolder . $filename);
           if ($response != '1') {
             send_message("<i>Adding:</i> $bucket/$filename</li>");
             $html .= "<i>Adding:</i> $bucket/$filename</li>";
