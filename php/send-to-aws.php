@@ -81,9 +81,9 @@ if (empty($skip_database)) {
     $mysql_query = "mysqldump -uroot --password='" . $rootpass . "' -h" . $host . " " . $database . "> /app/backups/" . $database . "-" . $data_prefix . "." . $today . ".sql";
     $mysql_backup = exec($mysql_query);
     $gzip = `gzip -f /app/backups/$database-$data_prefix.$today.sql`;
-    $db_size_query = "mysql -uroot --password='" . $rootpass . "' -h" . $host . " information_schema -e 'SELECT ROUND(SUM(data_length + index_length) / 1024 / 1024, 1) as data_size FROM information_schema.tables WHERE table_schema=\"$database\"' -N -s";
-    $db_size = exec($db_size_query);
   }
+  $db_size_query = "mysql -uroot --password='" . $rootpass . "' -h" . $host . " information_schema -e 'SELECT ROUND(SUM(data_length + index_length) / 1024 / 1024, 1) as data_size FROM information_schema.tables WHERE table_schema=\"$database\"' -N -s";
+  $db_size = exec($db_size_query);
 }
 
 send_message('Pack up the files directory');
