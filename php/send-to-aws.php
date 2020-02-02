@@ -103,14 +103,6 @@ $html .= 'Backup Container ' . getenv('VERSION_NUMBER') . ' - Michael R. Bagnall
 $html .= 'Data Prefix: ' . getenv('DATA_PREFIX') . ' / Files Prefix: ' . getenv('FILES_PREFIX'). '<br />';
 $html .= 'Database Size of ' . $database . ' dump: ' . $db_size . ' Megabytes.<hr />';
 
-/* 
- * If we're only doing localfiles and not sending remotely, then clean up
- * old files that are past our TTL
- */
-if (!empty($keep_local)) {
-  delete_local_files($paths, $html);
-}
-
 if (!empty($aws_key) && !empty($aws_secret)) {
   /** Open up our connection to S3 */
   send_message('Open our S3 clent.');
@@ -142,6 +134,12 @@ if (!empty($aws_key) && !empty($aws_secret)) {
 
 // Close out our HTML.
 $html .= '</td></tr></table></body></html>';
+
+/* 
+ * If we're only doing localfiles and not sending remotely, then clean up
+ * old files that are past our TTL
+ */
+delete_local_files($paths, $html);
 
 send_html_email($html);
 
@@ -335,20 +333,28 @@ function send_message($text) {
   }
 }
 
-function delete_local_files($paths, $html) {
+function delete_local_files($paths, &$html, $keep_local_sql = 0, $keep_local_files = 0) {
   $html .= '<b>Local Backup Deletions:</b><hr />';
   foreach ($paths as $bucket => $buckets) {
     foreach ($buckets as $key => $info) {
       chdir($info['path']);
       $filenames = glob($info['glob']);
       if (!empty($filenames)) {
+        $html .= '<ul>';
         foreach ($filenames as $filename) {
+          $html .= "<li><i>Deleted Key:</i> " . $info['path'] . "/" . $filename . '</li>';
           $filetime = filemtime($filename);
           $expires = time() - (60*60*24) * getenv('AWS_FILE_TTL');
           if ($filetime < $expires) {
-            unlink($filename);
+            if ($key == SQL_FOLDER && empty($keep_local_sql)) {
+              unlink($info['path'] .'/' . $filename);
+            }
+            if ($key == FILES_FOLDER && empty($keep_local_files)) {
+              unlink($info['path'] .'/' . $filename);
+            }
           }
         }
+        $html .= '</ul>';
       }
     }
   }
