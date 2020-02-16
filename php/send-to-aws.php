@@ -221,6 +221,10 @@ function upload_files(&$html, $s3, $paths, $aws_bucket_subfolder = NULL, $keep_l
             $html .= "<i>Adding:</i> $bucket/$filename</li>";
             $filepath = $info['path'] .'/' . $filename;
 
+            if (!file_exists($filepath)) {
+              continue;
+            }
+            
             $source = fopen($info['path'] .'/' . $filename, 'rb');
             $uploader = new ObjectUploader(
               $s3,
