@@ -41,7 +41,8 @@ $skip_files = getenv('SKIP_FILES');
 $skip_database = getenv('SKIP_DATABASE');
 $delete_first = getenv('DELETE_FIRST');
 $aws_bucket_subfolder = getenv('AWS_BUCKET_SUBFOLDER');
-$keep_local = getenv('KEEP_LOCAL');
+$keep_local_sql = getenv('KEEP_LOCAL_SQL');
+$keep_local_files = getenv('KEEP_LOCAL_FILES');
 
 send_message('Pre-systems check');
 $sitename = (!empty($site_identifier)) ? $site_identifier : "Identifier Not Provided.";
@@ -53,10 +54,19 @@ if (!empty($aws_bucket_subfolder)) {
 
 $paths = [
   $aws_bucket => [
-    'path' => '/app/backups',
-    'glob' => '*.gz',
+    [
+      'path' => '/app/backups',
+      'glob' => '*.tar.gz',
+    ],
+    [
+      'path' => '/app/backups',
+      'glob' => '*.sql.gz',
+    ],
   ],
 ];
+
+define('SQL_FOLDER', 1);
+define('FILES_FOLDER', 0);
 
 $today = date('Y-m-d');
 
@@ -71,9 +81,9 @@ if (empty($skip_database)) {
     $mysql_query = "mysqldump -uroot --password='" . $rootpass . "' -h" . $host . " " . $database . "> /app/backups/" . $database . "-" . $data_prefix . "." . $today . ".sql";
     $mysql_backup = exec($mysql_query);
     $gzip = `gzip -f /app/backups/$database-$data_prefix.$today.sql`;
-    $db_size_query = "mysql -uroot --password='" . $rootpass . "' -h" . $host . " information_schema -e 'SELECT ROUND(SUM(data_length + index_length) / 1024 / 1024, 1) as data_size FROM information_schema.tables WHERE table_schema=\"$database\"' -N -s";
-    $db_size = exec($db_size_query);
   }
+  $db_size_query = "mysql -uroot --password='" . $rootpass . "' -h" . $host . " information_schema -e 'SELECT ROUND(SUM(data_length + index_length) / 1024 / 1024, 1) as data_size FROM information_schema.tables WHERE table_schema=\"$database\"' -N -s";
+  $db_size = exec($db_size_query);
 }
 
 send_message('Pack up the files directory');
@@ -98,7 +108,7 @@ $html .= 'Database Size of ' . $database . ' dump: ' . $db_size . ' Megabytes.<h
  * old files that are past our TTL
  */
 if (!empty($keep_local)) {
-  $html = delete_local_files($paths, $html);
+  $html .= delete_local_files($paths, $html);
 }
 
 if (!empty($aws_key) && !empty($aws_secret)) {
@@ -122,11 +132,11 @@ if (!empty($aws_key) && !empty($aws_secret)) {
   /** this to be configurable. */
   if (!empty($delete_first)) {
     delete_files($html, $s3, $paths, $aws_bucket_subfolder);
-    upload_files($html, $s3, $paths, $aws_bucket_subfolder, $keep_local);
+    upload_files($html, $s3, $paths, $aws_bucket_subfolder, $keep_local_sql, $keep_local_files);
   }
   else {
     upload_files($html, $s3, $paths, $aws_bucket_subfolder);
-    delete_files($html, $s3, $paths, $aws_bucket_subfolder, $keep_local);
+    delete_files($html, $s3, $paths, $aws_bucket_subfolder, $keep_local_sql, $keep_local_files);
   }
 }
 
@@ -135,9 +145,21 @@ $html .= '</td></tr></table></body></html>';
 
 send_html_email($html);
 
-/************************************************************************/
-
-function delete_files(&$html, $s3, $paths, $aws_bucket_subfolder) {
+/**
+ * delete_files()
+ * 
+ * @param string $html
+ *  A reference to the HTML email variable so that it can be appended to without
+ *  a return value.
+ * @param S3Client $s3
+ *  The S3 client object.
+ * @param array $paths
+ *  An array of the paths for this bucket to be availated and deleted.
+ * @param string $aws_bucket_subfolder
+ *  The subfolder within the bucket to check for deletions, Without this,
+ *  the script will delete every matching file in the bucket. Could be bad.
+ */
+function delete_files(&$html, $s3, $paths, $aws_bucket_subfolder = NULL) {
   send_message('Do Our Deletions');
   /** Step One: Delete any files older than the interval number of days (TTL) days. */
   $html .= '<b>Remote File Deletions:</b><hr />';
@@ -153,10 +175,21 @@ function delete_files(&$html, $s3, $paths, $aws_bucket_subfolder) {
     if (!empty($result['Contents'])) {
       $html .= '<ul>';
       foreach ($result['Contents'] as $key => $content) {
+        if (!empty($aws_bucket_subfolder)) {
+          if (strpos($content['Key'], $aws_bucket_subfolder) !== FALSE) {
+            $delete = TRUE;
+          }
+          else {
+            $delete = FALSE;
+          }
+        }
+        else {
+          $delete = TRUE;
+        }
         $last_modified = strtotime($content['LastModified']->__toString());
         // Entries expire and are deleted after the configured days.
-          $expires = time() - (60*60*24) * getenv('AWS_FILE_TTL');
-          if ($last_modified < $expires) {
+        $expires = time() - (60*60*24) * getenv('AWS_FILE_TTL');
+        if ($delete == TRUE && $last_modified < $expires) {
           $delete = $s3->DeleteObject([
             'Bucket' => $bucket,
             'Key' => $content['Key'],
@@ -172,53 +205,62 @@ function delete_files(&$html, $s3, $paths, $aws_bucket_subfolder) {
   }
 }
 
-function upload_files(&$html, $s3, $paths, $aws_bucket_subfolder, $keep_local) {
+function upload_files(&$html, $s3, $paths, $aws_bucket_subfolder = NULL, $keep_local_sql = 0, $keep_local_files = 0) {
   send_message("Do our upload");
   /** Step Two: Upload any new files. */
   $html .= "<b>Additions:</b><hr />";
-  foreach ($paths as $bucket => $info) {
-    chdir($info['path']);
-    $filenames = glob($info['glob']);
-    if (!empty($filenames)) {
-      $html .= '<ul>';
-      foreach (glob($info['glob']) as $filename) {
-        $html .= '<li><b>' . $info['path'] . ':</b> ';
-        $response = $s3->doesObjectExist($bucket, $filename);
-        if ($response != '1') {
-          send_message("<i>Adding:</i> $bucket/$filename</li>");
-          $html .= "<i>Adding:</i> $bucket/$filename</li>";
-          $filepath = $info['path'] .'/' . $filename;
+  foreach ($paths as $bucket => $buckets) {
+    foreach ($buckets as $key => $info) {
+      chdir($info['path']);
+      $filenames = glob($info['glob']);
+      if (!empty($filenames)) {
+        $html .= '<ul>';
+        foreach (glob($info['glob']) as $filename) {
+          $html .= '<li><b>' . $info['path'] . ':</b> ';
+          $response = $s3->doesObjectExist($bucket, $aws_bucket_subfolder . $filename);
+          if ($response != '1') {
+            send_message("<i>Adding:</i> $bucket/$filename</li>");
+            $html .= "<i>Adding:</i> $bucket/$filename</li>";
+            $filepath = $info['path'] .'/' . $filename;
 
-          $source = fopen($info['path'] .'/' . $filename, 'rb');
-          $uploader = new ObjectUploader(
-            $s3,
-            $bucket,
-            $aws_bucket_subfolder . $filename,
-            $source
-          );
-
-          do {
-            try {
-              $result = $uploader->upload();
-            } catch (MultipartUploadException $e) {
-              rewind($source);
-              $uploader = new MultipartUploader($s3, $source, [
-                'state' => $e->getState(),
-              ]);
+            if (!file_exists($filepath)) {
+              continue;
             }
-          } while (!isset($result));
+            
+            $source = fopen($info['path'] .'/' . $filename, 'rb');
+            $uploader = new ObjectUploader(
+              $s3,
+              $bucket,
+              $aws_bucket_subfolder . $filename,
+              $source
+            );
 
-          $url = $result['Location'];
+            do {
+              try {
+                $result = $uploader->upload();
+              } catch (MultipartUploadException $e) {
+                rewind($source);
+                $uploader = new MultipartUploader($s3, $source, [
+                  'state' => $e->getState(),
+                ]);
+              }
+            } while (!isset($result));
+
+            $url = $result['Location'];
+          }
+          else {
+            $html .= $bucket . '/' . $filename . ' <i>Already Exists</i></li>';
+            send_message($bucket . '/' . $filename . ' <i>Already Exists</i></li>');
+          }
+          if ($key == SQL_FOLDER && empty($keep_local_sql)) {
+            unlink($info['path'] .'/' . $filename);
+          }
+          if ($key == FILES_FOLDER && empty($keep_local_files)) {
+            unlink($info['path'] .'/' . $filename);
+          }
         }
-        else {
-          $html .= $bucket . '/' . $filename . ' <i>Already Exists</i></li>';
-          send_message($bucket . '/' . $filename . ' <i>Already Exists</i></li>');
-        }
-        if (empty($keep_local)) {
-          unlink($info['path'] .'/' . $filename);
-        }
+        $html .= '</ul>';
       }
-      $html .= '</ul>';
     }
   }
 }
@@ -314,6 +356,7 @@ function delete_local_files($paths, $html) {
         else {
           $kept_files[] = $filename;
         }
+        $html .= '</ul>';
       }
     }
   }

@@ -50,7 +50,7 @@ This is the secret key used to authenticate with AWS. KEEP THIS OUT OF YOUR GIT 
 This is the secret phrase used to authenticate with AWS. Again, KEEP THIS OUT OF YOUR GIT REPOSITORY. You have been warned. Don't make the same mistakes I have :)  
 
 **AWS_FILE_TTL**  
-This is the number of days to keep of backups. Each backup will be kept for this interval. Once reached, the file will be removed on the next synchronization.  
+This is the number of days to keep of backups. Each backup will be kept for this interval. Once reached, the file will be removed on the next synchronization. This should be set even if not using AWS for storage as it also controlls the TTL for backup files to be kept locally.  
 
 **MYSQL_HOST**  
 The hostname of the MySQL container.  
@@ -75,6 +75,12 @@ The prefix to place as part of the file name. Can be used to identify backups gi
 
 **DATA_PREFIX**  
 The same as a files prefix, but applies to the database export. It is worthy of noting that the databases will already be prefixed with the `MYSQL_DATABASE` setting as a matter of course.  
+
+**KEEP_LOCAL_FILES**  
+Keep a local copy of the files directory backup in the backups folder for the number of days set in AWS_FILE_TTL.  
+
+**KEEP_LOCAL_SQL**  
+Keep a local copy of the SQL database backups in the backups folder for the number of days set in AWS_FILE_TTL.  
 
 **SMTP_AUTH**  
 Boolean. Sets whether the SMTP server requires authentication or not.  
