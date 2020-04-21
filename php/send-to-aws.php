@@ -98,7 +98,7 @@ $html .= 'Database Size of ' . $database . ' dump: ' . $db_size . ' Megabytes.<h
  * old files that are past our TTL
  */
 if (!empty($keep_local)) {
-  delete_local_files($paths, $html);
+  $html = delete_local_files($paths, $html);
 }
 
 if (!empty($aws_key) && !empty($aws_secret)) {
@@ -298,6 +298,7 @@ function send_message($text) {
 }
 
 function delete_local_files($paths, $html) {
+  $kept_files = [];
   $html .= '<b>Local Backup Deletions:</b><hr />';
   foreach ($paths as $bucket => $info) {
     chdir($info['path']);
@@ -308,8 +309,17 @@ function delete_local_files($paths, $html) {
         $expires = time() - (60*60*24) * getenv('AWS_FILE_TTL');
         if ($filetime < $expires) {
           unlink($filename);
+          $html .= $filename . '<br />';
+        }
+        else {
+          $kept_files[] = $filename;
         }
       }
     }
   }
+  $html .= '<b>Kept Files On Local File System</b><br />';
+  foreach ($kept_files as $kept_file) {
+    $html .= $kept_file . "<br />";
+  }
+  return $html;
 }
