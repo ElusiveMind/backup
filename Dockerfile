@@ -5,16 +5,16 @@ LABEL name="ITCON Backup Container"
 LABEL description="A backup system based in Docker designed for Drupal backups to AWS/MinIO"
 LABEL author="Michael R. Bagnall <mbagnall@itcon-inc.com>"
 LABEL vendor="ITCON Services, LLC."
-LABEL version="0.31"
+LABEL version="0.32"
 
 # Version string
-ENV VERSION_NUMBER v0.31
+ENV VERSION_NUMBER v0.32
 
 RUN apt-get update
 RUN apt-get -y install mysql-common
 RUN apt-get -y install default-mysql-client
 RUN apt-get -y install cron
-RUN apt-get -y install gettext procps nano
+RUN apt-get -y install gettext procps nano vim
 
 COPY cron/aws /etc/cron.d/aws
 RUN chmod 0644 /etc/cron.d/aws

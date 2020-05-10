@@ -41,8 +41,7 @@ $skip_files = getenv('SKIP_FILES');
 $skip_database = getenv('SKIP_DATABASE');
 $delete_first = getenv('DELETE_FIRST');
 $aws_bucket_subfolder = getenv('AWS_BUCKET_SUBFOLDER');
-$keep_local_sql = getenv('KEEP_LOCAL_SQL');
-$keep_local_files = getenv('KEEP_LOCAL_FILES');
+$keep_local = getenv('KEEP_LOCAL');
 
 send_message('Pre-systems check');
 $sitename = (!empty($site_identifier)) ? $site_identifier : "Identifier Not Provided.";
@@ -64,9 +63,6 @@ $paths = [
     ],
   ],
 ];
-
-define('SQL_FOLDER', 1);
-define('FILES_FOLDER', 0);
 
 $today = date('Y-m-d');
 
@@ -132,11 +128,11 @@ if (!empty($aws_key) && !empty($aws_secret)) {
   /** this to be configurable. */
   if (!empty($delete_first)) {
     delete_files($html, $s3, $paths, $aws_bucket_subfolder);
-    upload_files($html, $s3, $paths, $aws_bucket_subfolder, $keep_local_sql, $keep_local_files);
+    upload_files($html, $s3, $paths, $aws_bucket_subfolder, $keep_local);
   }
   else {
     upload_files($html, $s3, $paths, $aws_bucket_subfolder);
-    delete_files($html, $s3, $paths, $aws_bucket_subfolder, $keep_local_sql, $keep_local_files);
+    delete_files($html, $s3, $paths, $aws_bucket_subfolder, $keep_local);
   }
 }
 
@@ -205,7 +201,7 @@ function delete_files(&$html, $s3, $paths, $aws_bucket_subfolder = NULL) {
   }
 }
 
-function upload_files(&$html, $s3, $paths, $aws_bucket_subfolder = NULL, $keep_local_sql = 0, $keep_local_files = 0) {
+function upload_files(&$html, $s3, $paths, $aws_bucket_subfolder = NULL, $keep_local = NULL) {
   send_message("Do our upload");
   /** Step Two: Upload any new files. */
   $html .= "<b>Additions:</b><hr />";
@@ -252,10 +248,7 @@ function upload_files(&$html, $s3, $paths, $aws_bucket_subfolder = NULL, $keep_l
             $html .= $bucket . '/' . $filename . ' <i>Already Exists</i></li>';
             send_message($bucket . '/' . $filename . ' <i>Already Exists</i></li>');
           }
-          if ($key == SQL_FOLDER && empty($keep_local_sql)) {
-            unlink($info['path'] .'/' . $filename);
-          }
-          if ($key == FILES_FOLDER && empty($keep_local_files)) {
+          if (empty($keep_local)) {
             unlink($info['path'] .'/' . $filename);
           }
         }
@@ -342,21 +335,23 @@ function send_message($text) {
 function delete_local_files($paths, $html) {
   $kept_files = [];
   $html .= '<b>Local Backup Deletions:</b><hr />';
-  foreach ($paths as $bucket => $info) {
-    chdir($info['path']);
-    $filenames = glob($info['glob']);
-    if (!empty($filenames)) {
-      foreach ($filenames as $filename) {
-        $filetime = filemtime($filename);
-        $expires = time() - (60*60*24) * getenv('AWS_FILE_TTL');
-        if ($filetime < $expires) {
-          unlink($filename);
-          $html .= $filename . '<br />';
+  foreach ($paths as $bucket => $buckets) {
+    foreach ($buckets as $key => $info) {
+      chdir($info['path']);
+      $filenames = glob($info['glob']);
+      if (!empty($filenames)) {
+        foreach ($filenames as $filename) {
+          $filetime = filemtime($filename);
+          $expires = time() - (60*60*24) * getenv('AWS_FILE_TTL');
+          if ($filetime < $expires) {
+            unlink($filename);
+            $html .= $filename . '<br />';
+          }
+          else {
+            $kept_files[] = $filename;
+          }
+          $html .= '</ul>';
         }
-        else {
-          $kept_files[] = $filename;
-        }
-        $html .= '</ul>';
       }
     }
   }
