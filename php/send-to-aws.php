@@ -61,11 +61,13 @@ $paths = [
   $aws_bucket => [
     [
       'path' => '/app/backups',
-      'glob' => '*.tar.gz',
-    ],
-    [
-      'path' => '/app/backups',
       'glob' => '*.sql.gz',
+
+    ],
+      'path' => '/app/backups',
+      'glob' => '*.tar.gz',
+    [
+
     ],
   ],
 ];
