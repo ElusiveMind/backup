@@ -64,10 +64,9 @@ $paths = [
       'glob' => '*.sql.gz',
 
     ],
+    [
       'path' => '/app/backups',
       'glob' => '*.tar.gz',
-    [
-
     ],
   ],
 ];
