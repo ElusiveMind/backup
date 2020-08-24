@@ -168,39 +168,40 @@ function delete_files(&$html, $s3, $paths, $aws_bucket_subfolder = NULL) {
   $html .= '<b>Remote File Deletions:</b><hr />';
   foreach ($paths as $bucket => $info) {
     try {
-      $result = $s3->ListObjects([
-        'Bucket' => $bucket,
-        'EncodingType' => 'url',
+      $results = $s3->getPaginator('ListObjects', [
+        'Bucket' => $bucket
       ]);
     } catch (S3Exception $e) {
       echo $e->getMessage();
     }
-    if (!empty($result['Contents'])) {
-      $html .= '<ul>';
-      foreach ($result['Contents'] as $key => $content) {
-        if (!empty($aws_bucket_subfolder)) {
-          if (strpos($content['Key'], $aws_bucket_subfolder) !== FALSE) {
-            $delete = TRUE;
+    if (!empty($results)) {
+      foreach ($results as $result) {
+        $html .= '<ul>';
+        foreach ($result['Contents'] as $key => $content) {
+          if (!empty($aws_bucket_subfolder)) {
+            if (strpos($content['Key'], $aws_bucket_subfolder) !== FALSE) {
+              $delete = TRUE;
+            }
+            else {
+              $delete = FALSE;
+            }
           }
           else {
-            $delete = FALSE;
+            $delete = TRUE;
+          }
+          $last_modified = strtotime($content['LastModified']->__toString());
+          // Entries expire and are deleted after the configured days.
+          $expires = time() - (60*60*24) * getenv('AWS_FILE_TTL');
+          if ($delete == TRUE && $last_modified < $expires) {
+            $delete = $s3->DeleteObject([
+              'Bucket' => $bucket,
+              'Key' => $content['Key'],
+            ]);
+            $html .= "<li><i>Deleted Key:</i> $bucket/" . $content['Key'] . '</li>';
           }
         }
-        else {
-          $delete = TRUE;
-        }
-        $last_modified = strtotime($content['LastModified']->__toString());
-        // Entries expire and are deleted after the configured days.
-        $expires = time() - (60*60*24) * getenv('AWS_FILE_TTL');
-        if ($delete == TRUE && $last_modified < $expires) {
-          $delete = $s3->DeleteObject([
-            'Bucket' => $bucket,
-            'Key' => $content['Key'],
-          ]);
-          $html .= "<li><i>Deleted Key:</i> $bucket/" . $content['Key'] . '</li>';
-        }
+        $html .= '</ul>';
       }
-      $html .= '</ul>';
     }
     else {
       $html .= '<b>There are no files queued for deletion.</b><br /><br />';
