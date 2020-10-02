@@ -30,6 +30,7 @@ $aws_bucket_subfolder = getenv('AWS_BUCKET_SUBFOLDER');
 
 $site_identifier = getenv('SITE_IDENTIFIER');
 
+$use_postgres = getenv('USE_POSTGRES');
 $mysql_host = getenv('MYSQL_HOST');
 $user = getenv('MYSQL_USER');
 $pass = getenv('MYSQL_PASS');
@@ -81,12 +82,18 @@ backup_log('Extract and encrypt the MySQL Database');
 /** Get a current snapshot of the MySQL database provided a gzipped copy does not exist. */
 if (empty($skip_database)) {
   if (!file_exists("/app/backups/$database-$data_prefix.$today.sql.gz")) {
-    $mysql_query = "mysqldump --user='" . $user . "' --password='" . $pass . "' -h" . $host . " " . $database . "> /app/backups/" . $database . "-" . $data_prefix . "." . $today . ".sql";
-    $mysql_backup = exec($mysql_query);
+    if (!empty($use_postgres)) {
+      $psql_query = "pg_dump --username='" . $user . "' --no-password -h" . $host . " -d" . $database . "> /app/backups/" . $database . "-" . $data_prefix . "." . $today . ".sql";
+      $psql_backup = exec($psql_query);
+    }
+    else {
+      $mysql_query = "mysqldump --user='" . $user . "' --password='" . $pass . "' -h" . $host . " " . $database . "> /app/backups/" . $database . "-" . $data_prefix . "." . $today . ".sql";
+      $mysql_backup = exec($mysql_query);
+      $db_size_query = "mysql -uroot --password='" . $rootpass . "' -h" . $host . " information_schema -e 'SELECT ROUND(SUM(data_length + index_length) / 1024 / 1024, 1) as data_size FROM information_schema.tables WHERE table_schema=\"$database\"' -N -s";
+      $db_size = exec($db_size_query);
+    }
     $gzip = `gzip -f /app/backups/$database-$data_prefix.$today.sql`;
   }
-  $db_size_query = "mysql -uroot --password='" . $rootpass . "' -h" . $host . " information_schema -e 'SELECT ROUND(SUM(data_length + index_length) / 1024 / 1024, 1) as data_size FROM information_schema.tables WHERE table_schema=\"$database\"' -N -s";
-  $db_size = exec($db_size_query);
 }
 
 backup_log('Pack up the files directory');

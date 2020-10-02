@@ -24,6 +24,9 @@ fi
 envsubst < /etc/cron.d/aws > /etc/cron.d/aws-cron
 envsubst < /environment.txt > /etc/environment
 
+echo "${MYSQL_HOST}:5432:${MYSQL_DATABASE}:${MYSQL_USER}:${MYSQL_PASS}" > /root/.pgpass
+chmod 600 /root/.pgpass
+
 # Set up the cron in our set of crontabs
 crontab /etc/cron.d/aws-cron
 rm /etc/cron.d/aws
