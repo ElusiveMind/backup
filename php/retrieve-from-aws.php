@@ -1,5 +1,7 @@
 <?php
 
+ini_set('memory_limit', '1G');
+
 require '/php/vendor/autoload.php';
 
 use Aws\S3\S3Client;
