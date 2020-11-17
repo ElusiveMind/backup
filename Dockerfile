@@ -1,14 +1,14 @@
-FROM php:7.2-cli
+FROM php:7.3-cli
 
 # Set our our meta data for this container.
 LABEL name="ITCON Backup Container"
 LABEL description="A backup system based in Docker designed for Drupal backups to AWS/MinIO"
 LABEL author="Michael R. Bagnall <mbagnall@itcon-inc.com>"
 LABEL vendor="ITCON Services, LLC."
-LABEL version="0.34"
+LABEL version="0.35"
 
 # Version string
-ENV VERSION_NUMBER v0.34
+ENV VERSION_NUMBER v0.35
 
 RUN apt-get update
 RUN apt-get -y install mysql-common postgresql-client-common postgresql-client-11
