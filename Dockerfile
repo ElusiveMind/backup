@@ -8,7 +8,7 @@ LABEL vendor="ITCON Services, LLC."
 LABEL version="0.37"
 
 # Version string
-ENV VERSION_NUMBER 0.36
+ENV VERSION_NUMBER 0.37
 ENV BUILD_DATE "December 6, 2020"
 
 RUN apt-get update
