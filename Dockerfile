@@ -5,11 +5,11 @@ LABEL name="ITCON Backup Container"
 LABEL description="A backup system based in Docker designed for Drupal backups to AWS/MinIO"
 LABEL author="Michael R. Bagnall <mbagnall@itcon-inc.com>"
 LABEL vendor="ITCON Services, LLC."
-LABEL version="0.36"
+LABEL version="0.37"
 
 # Version string
 ENV VERSION_NUMBER 0.36
-ENV BUILD_DATE "November 17, 2020"
+ENV BUILD_DATE "December 6, 2020"
 
 RUN apt-get update
 RUN apt-get -y install mysql-common postgresql-client-common postgresql-client-11
