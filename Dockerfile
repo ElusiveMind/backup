@@ -1,4 +1,4 @@
-FROM php:7.3-cli
+FROM php:7.4-cli
 
 # Set our our meta data for this container.
 LABEL name="ITCON Backup Container"
@@ -12,7 +12,7 @@ ENV VERSION_NUMBER 0.37
 ENV BUILD_DATE "December 6, 2020"
 
 RUN apt-get update
-RUN apt-get -y install mysql-common postgresql-client-common postgresql-client-11
+RUN apt-get -y install mysql-common postgresql-client-common
 RUN apt-get -y install default-mysql-client
 RUN apt-get -y install cron
 RUN apt-get -y install gettext procps nano vim

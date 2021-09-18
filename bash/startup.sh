@@ -1,9 +1,9 @@
 #!/bin/bash
 
 echo "";
-echo "ITCON Services Backup and Restore Container";
+echo "Powertools.sh Backup and Restore Container";
 echo "Version $VERSION_NUMBER - $BUILD_DATE";
-echo "mrbagnall@icloud.com / mbagnall@itcon-inc.com";
+echo "hosting@powertools.sh / www.powertools.sh";
 echo "---------------------------------------------";
 echo "";
 
